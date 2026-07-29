@@ -206,7 +206,7 @@
     display: flex; flex-direction: column; gap: 1px;
     opacity: 0; transition: opacity 0.12s;
   }
-  .unit-wrap:hover .spin, .spin-tab:hover .spin { opacity: 1; }
+  .unit-wrap:hover .spin { opacity: 1; }
   .spin button {
     width: 15px; height: 10px;
     background: none; border: none; border-radius: 2px;
@@ -224,19 +224,8 @@
     border-left: 4px solid transparent; border-right: 4px solid transparent;
     border-top: 5px solid currentColor;
   }
-  /* 출력 설정 스핀 탭 */
-  #out-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-  .spin-tab {
-    position: relative;
-    background: var(--bg-input);
-    border: 1px solid #4a4a4a;
-    border-radius: 4px;
-    padding: 6px 26px 6px 9px;
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12px;
-  }
-  .spin-tab .lab { color: var(--text-faint); font-size: 10.5px; }
-  .spin-tab b { color: var(--text); font-weight: 600; margin-left: auto; }
+  #res-row-wrap { margin-bottom: 14px; }
+  #res-hint { font-size: 10.5px; color: var(--text-faint); margin-top: 4px; }
   #model-row-wrap { margin-bottom: 14px; }
   #model-hint { font-size: 10.5px; color: var(--text-faint); margin-top: 4px; }
   #cut-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
@@ -576,16 +565,13 @@
         <p id="model-hint">Whisper — 무료 로컬 실행</p>
       </div>
 
-      <p class="field-label">시퀀스 설정</p>
-      <div id="out-grid">
-        <div class="spin-tab">
-          <span class="lab">해상도</span><b id="res-val">FHD</b>
-          <span class="spin"><button class="up" data-spin="res" tabindex="-1"></button><button class="down" data-spin="res" tabindex="-1"></button></span>
+      <div id="res-row-wrap">
+        <p class="field-label">시퀀스 해상도</p>
+        <div class="seg-row" id="res-row" style="margin-bottom:0;">
+          <button data-res="FHD" class="on">FHD</button>
+          <button data-res="4K">4K</button>
         </div>
-        <div class="spin-tab">
-          <span class="lab">프레임</span><b id="fps-val">원본</b>
-          <span class="spin"><button class="up" data-spin="fps" tabindex="-1"></button><button class="down" data-spin="fps" tabindex="-1"></button></span>
-        </div>
+        <p id="res-hint">FHD — 4K 소스를 1080p 시퀀스에 맞춰 배치 (비파괴)</p>
       </div>
 
       <div id="cutedit-actions">

@@ -59,8 +59,7 @@
   var seqInfo = { name: null, fps: 30000 / 1001, src: null };
   var settings = {
     preset: "medium", PAD_LEAD: 0.22, MIN_SILENCE: 0.30, PAD_TAIL: 0.10,
-    srcMode: "track", sttModel: "whisper",
-    resolution: "FHD", outFps: "원본"
+    srcMode: "track", sttModel: "whisper", resolution: "FHD"
   };
   var detectedSrt = null;
 
@@ -297,8 +296,7 @@
     $("in-padlead").value = settings.PAD_LEAD;
     $("in-minsil").value = settings.MIN_SILENCE;
     $("in-padtail").value = settings.PAD_TAIL;
-    $("res-val").textContent = settings.resolution;
-    $("fps-val").textContent = settings.outFps;
+    syncResRow();
     renderWave();
   }
 
@@ -351,29 +349,24 @@
     }
   })();
 
-  // 출력 설정: 해상도/프레임 스핀 탭
-  var RES_STEPS = ["FHD", "4K"];
-  var FPS_STEPS = ["원본", "23.976", "24", "25", "29.97", "30", "50", "59.94", "60"];
-
-  function stepList(list, cur, dir) {
-    var i = list.indexOf(cur);
-    if (i === -1) i = 0;
-    return list[Math.max(0, Math.min(list.length - 1, i + dir))];
+  // 시퀀스 해상도 (FHD/4K 투버튼)
+  function syncResRow() {
+    var btns = $("res-row").children;
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("on", btns[i].dataset.res === settings.resolution);
+    }
+    $("res-hint").textContent = settings.resolution === "FHD"
+      ? "FHD — 4K 소스를 1080p 시퀀스에 맞춰 배치 (비파괴)"
+      : "4K — 원본 해상도 그대로의 시퀀스";
   }
 
   (function () {
-    var btns = document.querySelectorAll('#out-grid .spin button');
+    var btns = $("res-row").children;
     for (var i = 0; i < btns.length; i++) {
       (function (b) {
         b.addEventListener("click", function () {
-          var dir = b.className.indexOf("up") === 0 ? 1 : -1;
-          if (b.dataset.spin === "res") {
-            settings.resolution = stepList(RES_STEPS, settings.resolution, dir);
-            $("res-val").textContent = settings.resolution;
-          } else {
-            settings.outFps = stepList(FPS_STEPS, settings.outFps, dir);
-            $("fps-val").textContent = settings.outFps;
-          }
+          settings.resolution = b.dataset.res;
+          syncResRow();
           saveSettings(true);
         });
       })(btns[i]);
@@ -596,7 +589,6 @@
         if (typeof s.srcMode === "string") settings.srcMode = s.srcMode;
         if (typeof s.sttModel === "string") settings.sttModel = s.sttModel;
         if (typeof s.resolution === "string") settings.resolution = s.resolution;
-        if (typeof s.outFps === "string") settings.outFps = s.outFps;
         if (typeof s.fhd === "boolean") settings.resolution = s.fhd ? "FHD" : "4K";
       } catch (e) {}
     }
