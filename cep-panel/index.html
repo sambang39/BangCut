@@ -6,6 +6,7 @@
 <style>
   :root {
     --bg: #232323;
+    --bg-side: #1d1d1d;
     --bg-elev: #2b2b2b;
     --bg-elev2: #303030;
     --bg-input: #1c1c1c;
@@ -16,7 +17,6 @@
     --text-faint: #5c5c5c;
     --accent: #2d8ceb;
     --accent-bright: #3fa9f5;
-    --accent-dark: #1d5c9c;
     --sel-bg: #16324b;
     --warn: #e06c5c;
     --ok: #6cbf6c;
@@ -28,8 +28,6 @@
     color: var(--text);
     font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
     font-size: 12px;
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
     -webkit-user-select: none;
     user-select: none;
@@ -64,7 +62,7 @@
     font-size: 10px;
     color: var(--text-dim);
   }
-  input[type="number"], input[type="text"] {
+  input[type="number"], input[type="text"], input[type="password"] {
     background: var(--bg-input);
     border: 1px solid #4a4a4a;
     border-radius: 4px;
@@ -78,7 +76,6 @@
   }
   input:focus { outline: none; border-color: var(--accent); }
 
-  /* 토글 스위치 */
   .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: var(--text-dim); }
   .switch .knob {
     width: 28px; height: 15px; border-radius: 8px;
@@ -93,55 +90,71 @@
   .switch.on .knob::after { left: 15px; }
   .switch.on { color: var(--text); }
 
-  /* ---------- 앱바 ---------- */
-  #appbar {
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 12px;
-    border-bottom: 1px solid var(--border);
+  /* ---------- 앱 레이아웃: 좌측 사이드바 ---------- */
+  #app { display: flex; height: 100%; }
+  #sidebar {
+    width: 78px;
+    background: var(--bg-side);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     flex-shrink: 0;
+    padding: 12px 0 10px;
   }
-  #btn-back { background: none; border: none; padding: 2px 6px; color: var(--text-dim); font-size: 15px; display: none; }
-  #btn-back:hover { color: var(--text); background: none; }
-  #logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.2px; }
-  #logo .cut { color: var(--accent-bright); }
-  #appbar-title { font-size: 12px; color: var(--text); font-weight: 600; display: none; }
-  #seq-name {
-    margin-left: auto; font-size: 11px; color: var(--text-dim);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%;
+  #side-logo {
+    text-align: center;
+    font-size: 12.5px; font-weight: 700; color: #fff;
+    line-height: 1.15;
+    margin-bottom: 14px;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
   }
+  #side-logo .cut { color: var(--accent-bright); }
+  .side-item {
+    background: none; border: none; border-left: 2px solid transparent;
+    border-radius: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 10px 0 9px;
+    color: var(--text-dim);
+    font-size: 10.5px;
+    cursor: pointer;
+  }
+  .side-item:hover { background: #242424; color: var(--text); border-color: transparent; }
+  .side-item.on {
+    background: #262c33;
+    color: var(--accent-bright);
+    border-left-color: var(--accent);
+  }
+  .side-item svg { width: 17px; height: 17px; fill: currentColor; }
+  #side-spacer { flex: 1; }
+  #side-ver { text-align: center; font-size: 9px; color: #4a4a4a; }
 
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; position: relative; }
   .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; }
   .screen.active { display: flex; }
+  .screen-pad { overflow-y: auto; padding: 14px; }
 
-  /* ---------- 홈 ---------- */
-  #screen-home { overflow-y: auto; padding: 14px; gap: 12px; }
-  .step-card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-  .step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
-  .step-num {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: var(--accent); color: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0;
-  }
-  .step-num.dim { background: #4a4a4a; color: var(--text); }
-  .step-title { font-size: 13px; font-weight: 600; color: #fff; }
-  .step-badge { margin-left: auto; font-size: 10px; }
-  .step-badge.ok { color: var(--ok); }
-  .step-badge.none { color: var(--text-faint); }
-  .step-desc { color: var(--text-dim); font-size: 11px; line-height: 1.6; margin-bottom: 11px; }
-  .step-desc b { color: var(--text); font-weight: 600; }
-  .step-actions { display: flex; gap: 6px; }
-  .step-actions .grow { flex: 1; }
+  .screen-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+  .screen-sub { font-size: 11px; color: var(--text-dim); margin-bottom: 14px; }
+  #seq-name { font-size: 11px; color: var(--text-dim); }
 
-  /* ---------- 컷편집 설정 ---------- */
-  #screen-cutedit { overflow-y: auto; padding: 14px; }
+  /* ---------- 컷편집 ---------- */
   .field-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
+  .field-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
   .seg-row { display: flex; gap: 6px; margin-bottom: 8px; }
   .seg-row button { flex: 1; padding: 7px 0; font-size: 11px; }
   .seg-row button.on {
     background: var(--sel-bg); border-color: var(--accent);
     color: var(--accent-bright); font-weight: 600;
   }
+  .seg-mini { display: inline-flex; background: var(--bg-input); border-radius: 6px; padding: 2px; }
+  .seg-mini button {
+    background: none; border: none; border-radius: 5px;
+    padding: 3px 13px; font-size: 11px; color: var(--text-dim);
+  }
+  .seg-mini button:hover { background: #2a2a2a; }
+  .seg-mini button.on { background: var(--accent); color: #fff; font-weight: 600; }
   #src-status {
     font-size: 11px; color: var(--text-dim); line-height: 1.6;
     background: var(--bg-input); border-radius: 5px;
@@ -150,6 +163,13 @@
   }
   #src-status b { color: var(--text); }
   #src-status .err { color: var(--warn); }
+
+  #manual-wrap { transition: opacity 0.15s; }
+  #manual-wrap.off { opacity: 0.35; pointer-events: none; }
+  #auto-note {
+    font-size: 10.5px; color: var(--text-faint);
+    margin: -8px 0 14px;
+  }
   #wave-box {
     background: var(--bg-input); border-radius: 6px;
     padding: 18px 10px 14px;
@@ -169,23 +189,25 @@
     transition: width 0.18s; flex-shrink: 0;
   }
   #wave-hint { text-align: center; font-size: 10px; color: var(--text-faint); margin-bottom: 16px; }
-  #detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
+  #detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
   #detail-grid .unit-wrap { position: relative; }
   #detail-grid .unit-wrap::after {
     content: "초"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
     color: var(--text-faint); font-size: 11px; pointer-events: none;
   }
-  #cut-note { font-size: 10px; color: var(--text-faint); line-height: 1.6; margin-bottom: 12px; }
-  #cut-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  #model-row-wrap { margin-bottom: 14px; }
+  #model-hint { font-size: 10.5px; color: var(--text-faint); margin-top: 4px; }
+  #cut-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
   #cutedit-actions { display: flex; gap: 6px; }
   #cutedit-actions .grow { flex: 1; }
+  #btn-run-cut { padding: 11px; font-size: 14px; }
   #cut-status { margin-top: 10px; font-size: 11px; color: var(--text-dim); min-height: 16px; line-height: 1.6; }
   #cut-status.ok { color: var(--ok); }
   #cut-status.err { color: var(--warn); }
   #run-log {
     display: none;
     margin-top: 10px;
-    background: var(--bg-input); border-radius: 5px;
+    background: #161616; border-radius: 5px;
     padding: 8px 10px;
     font-family: "SF Mono", Menlo, monospace; font-size: 10px; line-height: 1.55;
     color: var(--text-dim);
@@ -274,9 +296,11 @@
   }
   .row .btns button:hover { color: var(--text); border-color: #4a4a4a; background: var(--bg-elev2); }
 
-  #empty { padding: 44px 20px; text-align: center; color: var(--text-dim); line-height: 2.1; font-size: 12px; }
+  #empty { padding: 40px 20px; text-align: center; color: var(--text-dim); line-height: 2.1; font-size: 12px; }
+  #empty .actions { margin-top: 14px; }
+  #srt-hint { color: var(--text-faint); font-size: 11px; }
 
-  /* ---------- 찾기/바꾸기 드로어 ---------- */
+  /* ---------- 검색/바꾸기 드로어 ---------- */
   #find-drawer {
     display: none;
     width: 240px; max-width: 68%;
@@ -310,7 +334,7 @@
   #find-actions { padding: 8px 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
   #find-actions button { width: 100%; }
   #btn-find-close-drawer { background: none; border: none; color: var(--text-dim); }
-  #btn-find-close-drawer:hover { color: var(--text); }
+  #btn-find-close-drawer:hover { color: #fff; }
 
   #statusbar {
     padding: 6px 10px;
@@ -322,8 +346,28 @@
   #status.ok { color: var(--ok); }
   #status.err { color: var(--warn); }
 
-  /* ---------- 온보딩 모달 ---------- */
-  #onboard-overlay {
+  /* ---------- 설정 ---------- */
+  .set-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .set-card h3 { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .set-card .desc { font-size: 11px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; }
+  .set-field { margin-bottom: 8px; }
+  .set-field label { display: block; font-size: 10.5px; color: var(--text-dim); margin-bottom: 3px; }
+  .set-info { font-size: 11px; color: var(--text-dim); line-height: 1.8; -webkit-user-select: text; user-select: text; }
+  .set-info b { color: var(--text); font-weight: 600; }
+  .set-info .ok { color: var(--ok); }
+  .set-info .bad { color: var(--warn); }
+  #vito-status { font-size: 11px; margin-top: 6px; min-height: 15px; }
+  #vito-status.ok { color: var(--ok); }
+  #vito-status.err { color: var(--warn); }
+
+  /* ---------- 모달 공통 ---------- */
+  .overlay {
     display: none;
     position: absolute; inset: 0;
     background: rgba(0,0,0,0.55);
@@ -331,8 +375,8 @@
     align-items: center; justify-content: center;
     padding: 16px;
   }
-  #onboard-overlay.open { display: flex; }
-  #onboard-card {
+  .overlay.open { display: flex; }
+  .modal-card {
     background: #2b2b2b;
     border: 1px solid #4a4a4a;
     border-radius: 10px;
@@ -380,101 +424,101 @@
   #ob-status { font-size: 11px; line-height: 1.8; margin: 4px 0 12px; color: var(--text-dim); }
   #ob-status .ok { color: var(--ok); }
   #ob-status .bad { color: var(--warn); }
-  #onboard-actions { display: flex; gap: 6px; }
-  #onboard-actions .grow { flex: 1; }
+  .modal-actions { display: flex; gap: 6px; }
+  .modal-actions .grow { flex: 1; }
 </style>
 </head>
 <body>
-  <div id="appbar">
-    <button id="btn-back" title="홈으로">←</button>
-    <span id="logo">Bang<span class="cut">Cut</span></span>
-    <span id="appbar-title"></span>
-    <span id="seq-name">시퀀스 확인 중…</span>
-  </div>
+<div id="app">
+  <!-- 좌측 사이드바 -->
+  <nav id="sidebar">
+    <div id="side-logo">Bang<span class="cut">Cut</span></div>
+    <button class="side-item on" data-screen="screen-cutedit" id="side-cutedit">
+      <svg viewBox="0 0 24 24"><path d="M9.6 12 4.2 4.5a1 1 0 0 1 1.6-1.2L12 10l6.2-6.7a1 1 0 0 1 1.6 1.2L14.4 12l2.1 2.9a3.4 3.4 0 1 1-1.7 1L12 13.4l-2.8 2.5a3.4 3.4 0 1 1-1.7-1zM7 20a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 7 20zm10 0a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 17 20z"/></svg>
+      컷편집
+    </button>
+    <button class="side-item" data-screen="screen-editor" id="side-editor">
+      <svg viewBox="0 0 24 24"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 2v14h12V5H6zm2 3h8v1.6H8V8zm0 4h8v1.6H8V12zm0 4h5v1.6H8V16z"/></svg>
+      자막 편집
+    </button>
+    <button class="side-item" data-screen="screen-settings" id="side-settings">
+      <svg viewBox="0 0 24 24"><path d="M12 8.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2zm0 1.8a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zm8.7 3.3-1.9 1.1c.05-.35.08-.7.08-1.1 0-.4-.03-.75-.08-1.1l1.9-1.1a1 1 0 0 0 .4-1.3l-1.6-2.8a1 1 0 0 0-1.3-.4l-1.9 1.1a7 7 0 0 0-1.9-1.1V4.6a1 1 0 0 0-1-1h-3.2a1 1 0 0 0-1 1v2.2c-.7.3-1.3.65-1.9 1.1L5.4 6.8a1 1 0 0 0-1.3.4L2.5 10a1 1 0 0 0 .4 1.3l1.9 1.1c-.05.35-.08.7-.08 1.1 0 .4.03.75.08 1.1l-1.9 1.1a1 1 0 0 0-.4 1.3l1.6 2.8a1 1 0 0 0 1.3.4l1.9-1.1c.6.45 1.2.8 1.9 1.1v2.2a1 1 0 0 0 1 1h3.2a1 1 0 0 0 1-1v-2.2c.7-.3 1.3-.65 1.9-1.1l1.9 1.1a1 1 0 0 0 1.3-.4l1.6-2.8a1 1 0 0 0-.4-1.3z" fill-rule="evenodd"/></svg>
+      설정
+    </button>
+    <div id="side-spacer"></div>
+    <div id="side-ver">v0.2</div>
+  </nav>
 
-  <!-- 홈 -->
-  <section id="screen-home" class="screen active">
-    <div class="step-card">
-      <div class="step-head">
-        <span class="step-num">1</span>
-        <span class="step-title">자동 컷편집</span>
-        <span class="step-badge none" id="step1-badge"></span>
+  <main id="main">
+
+  <!-- 컷편집 -->
+  <section id="screen-cutedit" class="screen active">
+    <div class="screen-pad">
+      <p class="screen-title">자동 컷편집</p>
+      <p class="screen-sub"><span id="seq-name">시퀀스 확인 중…</span><span id="src-name" style="display:none;"></span></p>
+
+      <p class="field-label">컷편집 대상</p>
+      <div class="seg-row" id="srcmode-row">
+        <button data-mode="selection">선택한 클립</button>
+        <button data-mode="track" class="on">V1 트랙 전체</button>
+        <button data-mode="inout">In/Out 구간</button>
       </div>
-      <p class="step-desc" id="step1-desc">
-        무음 구간 제거를 포함한 자동 컷편집.<br>
-        소스: <b id="src-name">감지 중…</b>
-      </p>
-      <div class="step-actions">
-        <button class="primary grow" id="btn-goto-cutedit">컷편집 설정</button>
+      <div id="src-status">감지 중…</div>
+
+      <div class="field-row-head">
+        <span class="field-label" style="margin:0;">공백 길이 — 말 사이에 남길 정적의 정도</span>
+        <span class="seg-mini" id="gapmode-row">
+          <button data-gap="auto" class="on">자동</button>
+          <button data-gap="manual">수동</button>
+        </span>
       </div>
-    </div>
-
-    <div class="step-card">
-      <div class="step-head">
-        <span class="step-num dim">2</span>
-        <span class="step-title">자막 편집</span>
-        <span class="step-badge none" id="step2-badge">SRT 없음</span>
+      <p id="auto-note">자동 — 클로드가 영상을 분석해 알맞은 값을 정합니다</p>
+      <div id="manual-wrap" class="off">
+        <div class="seg-row" id="preset-row"></div>
+        <div id="wave-box">
+          <span class="wave-bars" id="wave-left"></span>
+          <span class="wave-pad" id="wave-pad-lead"><em id="wave-pad-lead-v"></em></span>
+          <span id="wave-cut">✂ 제거</span>
+          <span class="wave-pad" id="wave-pad-tail"><em id="wave-pad-tail-v"></em></span>
+          <span class="wave-bars" id="wave-right"></span>
+        </div>
+        <p id="wave-hint">선택한 프리셋에 따라 잘리는 구간이 달라집니다</p>
+        <div id="detail-grid">
+          <div>
+            <p class="field-label">말 끝나고 남길 여백</p>
+            <div class="unit-wrap"><input type="number" id="in-padlead" step="0.01" min="0" max="2"></div>
+          </div>
+          <div>
+            <p class="field-label">최소 공백 제거 길이</p>
+            <div class="unit-wrap"><input type="number" id="in-minsil" step="0.01" min="0" max="3"></div>
+          </div>
+          <div>
+            <p class="field-label">다음 말 시작 전 여백</p>
+            <div class="unit-wrap"><input type="number" id="in-padtail" step="0.01" min="0" max="2"></div>
+          </div>
+        </div>
       </div>
-      <p class="step-desc">
-        컷편집 결과 자막을 불러와 수정한 뒤 시퀀스에 적용합니다.<br>
-        연결: <b id="srt-name">—</b>
-      </p>
-      <div class="step-actions">
-        <button class="grow" id="btn-open-editor" disabled>자막 편집 열기</button>
-        <button id="btn-open-manual">SRT 직접 열기</button>
+
+      <div id="model-row-wrap">
+        <p class="field-label">전사 모델</p>
+        <div class="seg-row" id="model-row" style="margin-bottom:0;">
+          <button data-model="whisper" class="on">Whisper <span style="color:var(--text-faint);font-size:10px;">무료</span></button>
+          <button data-model="vito">VITO <span style="color:var(--text-faint);font-size:10px;">API 키 필요</span></button>
+        </div>
+        <p id="model-hint">Whisper — 무료·로컬 실행, 설치만 하면 바로 사용</p>
       </div>
-    </div>
-  </section>
 
-  <!-- 컷편집 설정 -->
-  <section id="screen-cutedit" class="screen">
-    <p class="field-label">컷편집 대상</p>
-    <div class="seg-row" id="srcmode-row">
-      <button data-mode="selection">선택한 클립</button>
-      <button data-mode="track" class="on">V1 트랙 전체</button>
-      <button data-mode="inout">In/Out 구간</button>
-    </div>
-    <div id="src-status">감지 중…</div>
-
-    <p class="field-label">공백 길이 — 말 사이에 남길 정적의 정도</p>
-    <div class="seg-row" id="preset-row"></div>
-
-    <div id="wave-box">
-      <span class="wave-bars" id="wave-left"></span>
-      <span class="wave-pad" id="wave-pad-lead"><em id="wave-pad-lead-v"></em></span>
-      <span id="wave-cut">✂ 제거</span>
-      <span class="wave-pad" id="wave-pad-tail"><em id="wave-pad-tail-v"></em></span>
-      <span class="wave-bars" id="wave-right"></span>
-    </div>
-    <p id="wave-hint">선택한 프리셋에 따라 잘리는 구간이 달라집니다</p>
-
-    <div id="detail-grid">
-      <div>
-        <p class="field-label">말 끝나고 남길 여백</p>
-        <div class="unit-wrap"><input type="number" id="in-padlead" step="0.01" min="0" max="2"></div>
+      <div id="cut-opts">
+        <span class="switch on" id="sw-fhd"><span class="knob"></span>FHD로 출력 (4K → 1080p)</span>
       </div>
-      <div>
-        <p class="field-label">최소 공백 제거 길이</p>
-        <div class="unit-wrap"><input type="number" id="in-minsil" step="0.01" min="0" max="3"></div>
-      </div>
-      <div>
-        <p class="field-label">다음 말 시작 전 여백</p>
-        <div class="unit-wrap"><input type="number" id="in-padtail" step="0.01" min="0" max="2"></div>
-      </div>
-    </div>
-    <p id="cut-note">이 값은 엔진(auto_cut)의 PAD_LEAD · MIN_SILENCE · PAD_TAIL로 전달됩니다.</p>
 
-    <div id="cut-opts">
-      <span class="switch on" id="sw-fhd"><span class="knob"></span>FHD로 출력 (4K → 1080p)</span>
+      <div id="cutedit-actions">
+        <button class="primary grow" id="btn-run-cut">컷편집 시작</button>
+        <button class="danger" id="btn-stop-cut" style="display:none;">중단</button>
+      </div>
+      <p id="cut-status"></p>
+      <div id="run-log"></div>
     </div>
-
-    <div id="cutedit-actions">
-      <button class="grow" id="btn-save-settings">설정 저장</button>
-      <button class="primary grow" id="btn-run-cut">컷편집 시작</button>
-      <button class="danger" id="btn-stop-cut" style="display:none;">중단</button>
-    </div>
-    <p id="cut-status"></p>
-    <div id="run-log"></div>
   </section>
 
   <!-- 자막 편집 -->
@@ -502,10 +546,11 @@
         </div>
         <div id="cue-list">
           <div id="empty">
-            자막 파일을 불러오세요<br><br>
+            <p id="srt-hint">컷편집 결과 자막을 확인 중…</p><br>
             <kbd>W</kbd><kbd>S</kbd> 자막 이동 &nbsp; <kbd>A</kbd><kbd>D</kbd> 단어 이동 (플레이헤드 연동)<br>
             클릭 = 단어 선택 · 한 번 더 = 단어 수정 · 더블클릭 = 문장 수정<br>
             문장 수정 중: <kbd>⏎</kbd> 나누기 · <kbd>⇧⏎</kbd> 줄바꿈 · 맨 앞 <kbd>⌫</kbd> 병합 · <kbd>esc</kbd> 완료
+            <div class="actions"><button id="btn-open-manual">SRT 직접 열기</button></div>
           </div>
         </div>
         <div id="statusbar">
@@ -539,9 +584,41 @@
     </div>
   </section>
 
+  <!-- 설정 -->
+  <section id="screen-settings" class="screen">
+    <div class="screen-pad">
+      <p class="screen-title">설정</p>
+      <p class="screen-sub">BangCut 동작에 필요한 키와 환경을 관리합니다</p>
+
+      <div class="set-card">
+        <h3>VITO 전사 API</h3>
+        <p class="desc">리턴제로 VITO는 한국어 정확도가 높은 유료 전사입니다. <b>developers.rtzr.ai</b>에서 발급받은 키를 입력하면 전사 모델에서 VITO를 선택할 수 있어요.</p>
+        <div class="set-field">
+          <label>CLIENT ID</label>
+          <input type="text" id="set-vito-id" placeholder="발급받은 CLIENT_ID">
+        </div>
+        <div class="set-field">
+          <label>CLIENT SECRET</label>
+          <input type="password" id="set-vito-secret" placeholder="발급받은 CLIENT_SECRET">
+        </div>
+        <button class="primary" id="btn-save-vito">저장</button>
+        <p id="vito-status"></p>
+      </div>
+
+      <div class="set-card">
+        <h3>설치 상태</h3>
+        <p class="set-info" id="env-info">확인 중…</p>
+        <button id="btn-recheck-env" style="margin-top:8px;">설치 상태 다시 확인</button>
+      </div>
+    </div>
+  </section>
+
+  </main>
+</div>
+
   <!-- 온보딩 (전제조건 미충족 안내) -->
-  <div id="onboard-overlay">
-    <div id="onboard-card">
+  <div id="onboard-overlay" class="overlay">
+    <div class="modal-card">
       <p class="ob-title">BangCut을 쓰려면 준비가 필요해요</p>
       <p class="ob-sub">컷편집은 클로드 코드(Claude Code)가 이 맥에서 직접 수행합니다. 아래 두 단계를 마치면 바로 사용할 수 있어요.</p>
 
@@ -573,9 +650,33 @@
 
       <div id="ob-status"></div>
 
-      <div id="onboard-actions">
+      <div class="modal-actions">
         <button class="primary grow" id="btn-ob-recheck">다시 확인</button>
         <button id="btn-ob-close">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VITO 키 안내 -->
+  <div id="vito-overlay" class="overlay">
+    <div class="modal-card">
+      <p class="ob-title">VITO 전사를 쓰려면 API 키가 필요해요</p>
+      <p class="ob-sub">리턴제로 VITO는 유료 API입니다. 발급은 5분이면 끝나요.</p>
+
+      <div class="ob-step">
+        <div class="ob-step-head"><span class="ob-num">1</span><span class="txt"><b>developers.rtzr.ai</b>에 접속해 가입하세요</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-step-head"><span class="ob-num">2</span><span class="txt">콘솔에서 <b>애플리케이션 생성</b> → <b>CLIENT_ID / CLIENT_SECRET</b> 발급</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-step-head"><span class="ob-num">3</span><span class="txt">BangCut <b>설정</b> 탭에 두 키를 입력하고 저장하면 VITO가 활성화됩니다</span></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="grow" id="btn-vito-site">사이트 열기</button>
+        <button class="primary grow" id="btn-vito-goto-settings">설정으로 이동</button>
+        <button id="btn-vito-close">닫기</button>
       </div>
     </div>
   </div>

@@ -58,7 +58,7 @@
   var seqInfo = { name: null, fps: 30000 / 1001, src: null };
   var settings = {
     preset: "medium", PAD_LEAD: 0.22, MIN_SILENCE: 0.30, PAD_TAIL: 0.10,
-    srcMode: "track", fhd: true
+    srcMode: "track", fhd: true, sttModel: "whisper"
   };
   var detectedSrt = null;
 
@@ -84,23 +84,44 @@
 
   // ============ 화면 전환 ============
 
-  var TITLES = { "screen-home": "", "screen-cutedit": "자동 컷편집", "screen-editor": "자막 편집" };
-  var current = "screen-home";
+  var current = "screen-cutedit";
 
   function showScreen(id) {
     current = id;
-    ["screen-home", "screen-cutedit", "screen-editor"].forEach(function (s) {
+    ["screen-cutedit", "screen-editor", "screen-settings"].forEach(function (s) {
       $(s).classList.toggle("active", s === id);
     });
-    var home = id === "screen-home";
-    $("btn-back").style.display = home ? "none" : "inline-block";
-    $("appbar-title").style.display = home ? "none" : "inline";
-    $("appbar-title").textContent = TITLES[id];
-    if (home) refreshSeqInfo();
-    if (id === "screen-cutedit") detectCutSource();
+    var items = document.querySelectorAll(".side-item");
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.toggle("on", items[i].dataset.screen === id);
+    }
+    if (id === "screen-cutedit") { refreshSeqInfo(); detectCutSource(); }
+    if (id === "screen-editor") activateEditor();
+    if (id === "screen-settings") { loadVitoUi(); loadEnvInfo(); }
   }
 
-  $("btn-back").addEventListener("click", function () { showScreen("screen-home"); });
+  (function () {
+    var items = document.querySelectorAll(".side-item");
+    for (var i = 0; i < items.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function () { showScreen(el.dataset.screen); });
+      })(items[i]);
+    }
+  })();
+
+  function updateSrtHint(msg) {
+    var el = $("srt-hint");
+    if (el) el.textContent = msg;
+  }
+
+  // 자막 편집 탭 진입: 컷편집 결과 SRT 자동 감지·로드
+  function activateEditor() {
+    if (cues.length) return;
+    updateSrtHint("컷편집 결과 자막을 찾는 중…");
+    refreshSeqInfo(function () {
+      if (detectedSrt && !cues.length) loadFile(detectedSrt);
+    });
+  }
 
   // ============ 상태바 ============
 
@@ -175,17 +196,10 @@
     for (var i = 0; i < candidates.length; i++) {
       if (statOk(candidates[i])) { detectedSrt = candidates[i]; break; }
     }
-    var badge = $("step2-badge");
-    if (detectedSrt) {
-      badge.textContent = "SRT 연결됨";
-      badge.className = "step-badge ok";
-      $("srt-name").textContent = detectedSrt.split("/").pop();
-      $("btn-open-editor").disabled = false;
-    } else {
-      badge.textContent = "SRT 없음";
-      badge.className = "step-badge none";
-      $("srt-name").textContent = "—";
-      $("btn-open-editor").disabled = true;
+    if (!cues.length) {
+      updateSrtHint(detectedSrt
+        ? "감지됨: " + detectedSrt.split("/").pop()
+        : "컷편집 결과가 아직 없습니다 — 컷편집을 먼저 실행하거나 SRT를 직접 여세요");
     }
   }
 
@@ -324,7 +338,157 @@
   $("sw-fhd").addEventListener("click", function () {
     settings.fhd = !settings.fhd;
     $("sw-fhd").classList.toggle("on", settings.fhd);
+    saveSettings(true);
   });
+
+  // ============ 공백 길이 자동/수동 (H3) ============
+
+  var gapMode = "auto"; // 세션 한정 — 저장하지 않음, 열 때마다 자동+디폴트
+
+  function setGapMode(m) {
+    gapMode = m;
+    var btns = $("gapmode-row").children;
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("on", btns[i].dataset.gap === m);
+    }
+    $("manual-wrap").classList.toggle("off", m === "auto");
+    $("auto-note").style.display = m === "auto" ? "block" : "none";
+  }
+
+  (function () {
+    var btns = $("gapmode-row").children;
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.addEventListener("click", function () { setGapMode(b.dataset.gap); });
+      })(btns[i]);
+    }
+  })();
+
+  // ============ 전사 모델 토글 (H3) ============
+
+  function readEngineConfig() {
+    var fsN = nodeReq("fs");
+    var root = repoRoot();
+    if (!fsN || !root) return {};
+    try { return JSON.parse(fsN.readFileSync(root + "/config.json", "utf8")); }
+    catch (e) { return {}; }
+  }
+
+  function writeEngineConfig(cfg) {
+    var fsN = nodeReq("fs");
+    var root = repoRoot();
+    if (!fsN || !root) return false;
+    try { fsN.writeFileSync(root + "/config.json", JSON.stringify(cfg, null, 2)); return true; }
+    catch (e) { return false; }
+  }
+
+  function vitoKeysPresent() {
+    var cfg = readEngineConfig();
+    return !!(cfg.VITO_CLIENT_ID && cfg.VITO_CLIENT_SECRET);
+  }
+
+  function setModel(m, silent) {
+    if (m === "vito" && !vitoKeysPresent()) {
+      if (!silent) $("vito-overlay").classList.add("open");
+      m = "whisper";
+    }
+    settings.sttModel = m;
+    var btns = $("model-row").children;
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle("on", btns[i].dataset.model === m);
+    }
+    $("model-hint").textContent = m === "vito"
+      ? "VITO — 리턴제로 API 전사 (키 등록됨)"
+      : "Whisper — 무료·로컬 실행, 설치만 하면 바로 사용";
+    saveSettings(true);
+  }
+
+  (function () {
+    var btns = $("model-row").children;
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.addEventListener("click", function () { setModel(b.dataset.model, false); });
+      })(btns[i]);
+    }
+  })();
+
+  $("btn-vito-close").addEventListener("click", function () {
+    $("vito-overlay").classList.remove("open");
+  });
+  $("btn-vito-goto-settings").addEventListener("click", function () {
+    $("vito-overlay").classList.remove("open");
+    showScreen("screen-settings");
+    setTimeout(function () { $("set-vito-id").focus(); }, 50);
+  });
+  $("btn-vito-site").addEventListener("click", function () {
+    try { window.cep.util.openURLInDefaultBrowser("https://developers.rtzr.ai"); } catch (e) {}
+  });
+
+  // ============ 설정 화면 (H3) ============
+
+  function maskId(s) {
+    if (!s) return "";
+    return s.length <= 6 ? s : s.slice(0, 4) + "…" + s.slice(-2);
+  }
+
+  function loadVitoUi() {
+    var cfg = readEngineConfig();
+    var has = !!(cfg.VITO_CLIENT_ID && cfg.VITO_CLIENT_SECRET);
+    $("set-vito-id").value = cfg.VITO_CLIENT_ID || "";
+    $("set-vito-secret").value = "";
+    $("set-vito-secret").placeholder = has ? "저장됨 — 변경할 때만 입력" : "발급받은 CLIENT_SECRET";
+    var st = $("vito-status");
+    st.textContent = has ? "등록됨 (" + maskId(cfg.VITO_CLIENT_ID) + ") — VITO 사용 가능" : "";
+    st.className = has ? "ok" : "";
+  }
+
+  function saveVitoKeys() {
+    var id = $("set-vito-id").value.trim();
+    var sec = $("set-vito-secret").value.trim();
+    var cfg = readEngineConfig();
+    var st = $("vito-status");
+    if (!id) {
+      st.textContent = "CLIENT ID를 입력해 주세요";
+      st.className = "err";
+      return;
+    }
+    if (!sec && !cfg.VITO_CLIENT_SECRET) {
+      st.textContent = "CLIENT SECRET을 입력해 주세요";
+      st.className = "err";
+      return;
+    }
+    cfg.VITO_CLIENT_ID = id;
+    if (sec) cfg.VITO_CLIENT_SECRET = sec;
+    if (!writeEngineConfig(cfg)) {
+      st.textContent = "저장 실패 — 엔진 폴더 쓰기 권한을 확인해 주세요";
+      st.className = "err";
+      return;
+    }
+    loadVitoUi();
+    st.textContent = "저장됨 (" + maskId(id) + ") — 전사 모델에서 VITO를 선택할 수 있어요";
+    st.className = "ok";
+  }
+
+  $("btn-save-vito").addEventListener("click", saveVitoKeys);
+
+  function loadEnvInfo() {
+    $("env-info").innerHTML = "확인 중…";
+    checkPrereq(function () {
+      var root = repoRoot();
+      $("env-info").innerHTML =
+        "클로드 코드: " + (prereq.claude
+          ? '<span class="ok">✓ 설치됨</span> <span style="color:var(--text-faint)">(' + prereq.claudePath + ")</span>"
+          : '<span class="bad">✗ 미설치</span>') + "<br>" +
+        "엔진: " + (prereq.repo
+          ? '<span class="ok">✓</span> <b>' + (root || "") + "</b>"
+          : '<span class="bad">✗ 찾을 수 없음</span>') + "<br>" +
+        "파이썬 환경(.venv): " + (prereq.venv
+          ? '<span class="ok">✓ 준비됨</span>'
+          : '<span class="bad">✗ 미설치 — 온보딩 2단계를 진행해 주세요</span>');
+    });
+  }
+
+  $("btn-recheck-env").addEventListener("click", loadEnvInfo);
 
   function settingsPath() {
     var base = userDataDir();
@@ -355,11 +519,10 @@
     if (raw) {
       try {
         var s = JSON.parse(raw);
-        if (typeof s.PAD_LEAD === "number") settings.PAD_LEAD = s.PAD_LEAD;
-        if (typeof s.MIN_SILENCE === "number") settings.MIN_SILENCE = s.MIN_SILENCE;
-        if (typeof s.PAD_TAIL === "number") settings.PAD_TAIL = s.PAD_TAIL;
+        // 비율 값은 복원하지 않음 — 항상 디폴트(자동 모드)로 시작 (사용자 확정)
         if (typeof s.srcMode === "string") settings.srcMode = s.srcMode;
         if (typeof s.fhd === "boolean") settings.fhd = s.fhd;
+        if (typeof s.sttModel === "string") settings.sttModel = s.sttModel;
       } catch (e) {}
     }
   }
@@ -507,15 +670,18 @@
   }
 
   function writeEngineOverride(root) {
-    // 엔진의 사용자 override(config.json)에 패널 설정 3종 주입 (기존 키 보존)
-    var fsN = nodeReq("fs");
-    var cfgPath = root + "/config.json";
-    var cfg = {};
-    try { cfg = JSON.parse(fsN.readFileSync(cfgPath, "utf8")); } catch (e) {}
-    cfg.MIN_SILENCE = settings.MIN_SILENCE;
-    cfg.PAD_LEAD = settings.PAD_LEAD;
-    cfg.PAD_TAIL = settings.PAD_TAIL;
-    fsN.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+    // 수동 모드: 패널 설정 3종을 config.json에 주입 / 자동 모드: 잔여 override 제거(클로드가 판단)
+    var cfg = readEngineConfig();
+    if (gapMode === "manual") {
+      cfg.MIN_SILENCE = settings.MIN_SILENCE;
+      cfg.PAD_LEAD = settings.PAD_LEAD;
+      cfg.PAD_TAIL = settings.PAD_TAIL;
+    } else {
+      delete cfg.MIN_SILENCE;
+      delete cfg.PAD_LEAD;
+      delete cfg.PAD_TAIL;
+    }
+    if (!writeEngineConfig(cfg)) throw new Error("config.json 쓰기 실패");
   }
 
   function logLine(s) {
@@ -629,8 +795,6 @@
     logLine("== 사용자 중단 ==");
   }
 
-  $("btn-goto-cutedit").addEventListener("click", function () { showScreen("screen-cutedit"); });
-  $("btn-save-settings").addEventListener("click", function () { saveSettings(false); });
   $("btn-run-cut").addEventListener("click", runCut);
   $("btn-stop-cut").addEventListener("click", stopCut);
 
@@ -1304,9 +1468,6 @@
 
   // ============ 버튼 연결 (에디터) ============
 
-  $("btn-open-editor").addEventListener("click", function () {
-    if (detectedSrt) loadFile(detectedSrt);
-  });
   $("btn-open-manual").addEventListener("click", function () {
     var fs = cepFs();
     if (!fs) { setStatus("CEP 환경이 아닙니다", "err"); return; }
@@ -1341,6 +1502,8 @@
   loadSettings();
   buildPresetRow();
   syncCutUi();
+  setGapMode("auto");
+  setModel(settings.sttModel || "whisper", true);
   setSrcMode(settings.srcMode);
-  showScreen("screen-home");
+  showScreen("screen-cutedit");
 })();
