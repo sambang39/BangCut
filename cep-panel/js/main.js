@@ -356,7 +356,7 @@
       btns[i].classList.toggle("on", btns[i].dataset.res === settings.resolution);
     }
     $("res-hint").textContent = settings.resolution === "FHD"
-      ? "FHD — 4K 소스를 1080p 시퀀스에 맞춰 배치 (비파괴)"
+      ? "FHD — 4K 소스를 1080p 시퀀스에 맞춰 배치"
       : "4K — 원본 해상도 그대로의 시퀀스";
   }
 
