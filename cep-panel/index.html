@@ -93,7 +93,7 @@
   /* ---------- 앱 레이아웃: 좌측 사이드바 ---------- */
   #app { display: flex; height: 100%; }
   #sidebar {
-    width: 78px;
+    width: 86px;
     background: var(--bg-side);
     border-right: 1px solid var(--border);
     display: flex;
@@ -104,10 +104,10 @@
   }
   #side-logo {
     text-align: center;
-    font-size: 12.5px; font-weight: 700; color: #fff;
+    font-size: 16px; font-weight: 800; color: #fff;
     line-height: 1.15;
-    margin-bottom: 14px;
-    letter-spacing: 0.1px;
+    margin-bottom: 16px;
+    letter-spacing: 0.2px;
     white-space: nowrap;
   }
   #side-logo .cut { color: var(--accent-bright); }
@@ -351,10 +351,24 @@
     background: var(--bg-elev);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 14px;
     margin-bottom: 12px;
+    overflow: hidden;
   }
-  .set-card h3 { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .set-head {
+    width: 100%;
+    background: none; border: none; border-radius: 0;
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 14px;
+    font-size: 12px; font-weight: 600; color: #fff;
+    cursor: pointer;
+  }
+  .set-head:hover { background: #303030; }
+  .set-head .badge { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--text-faint); }
+  .set-head .badge.ok { color: var(--ok); }
+  .set-head .chev { color: var(--text-faint); font-size: 10px; transition: transform 0.15s; }
+  .set-card.open .set-head .chev { transform: rotate(90deg); }
+  .set-body { display: none; padding: 0 14px 14px; }
+  .set-card.open .set-body { display: block; }
   .set-card .desc { font-size: 11px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; }
   .set-field { margin-bottom: 8px; }
   .set-field label { display: block; font-size: 10.5px; color: var(--text-dim); margin-bottom: 3px; }
@@ -537,19 +551,19 @@
         </div>
         <div id="editor-actionbar">
           <button id="btn-split" title="포인트된 단어 앞에서 자막을 둘로 나눕니다 (문장 수정 중엔 커서 위치)">나누기 <kbd>⏎</kbd></button>
-          <button id="btn-merge-up" title="선택한 자막을 앞줄과 합칩니다">위와 병합</button>
-          <button id="btn-merge-down" title="선택한 자막을 다음 줄과 합칩니다">아래와 병합</button>
+          <button id="btn-merge-up" title="선택한 자막을 앞줄과 합칩니다">위와 병합 <kbd>⌫</kbd></button>
+          <button id="btn-merge-down" title="선택한 자막을 다음 줄과 합칩니다">아래와 병합 <kbd>⌦</kbd></button>
           <button class="icon-btn" id="btn-find" title="검색/바꾸기 (⌘F)">
             <svg viewBox="0 0 16 16"><path d="M11.2 10a5 5 0 1 0-1.2 1.2l3.2 3.2 1.2-1.2-3.2-3.2zM7 10.5A3.5 3.5 0 1 1 7 3.5a3.5 3.5 0 0 1 0 7z"/></svg>검색
           </button>
-          <button id="btn-save" title="수정본 SRT 저장 (⌘S)">저장 <kbd>⌘S</kbd></button>
+          <button id="btn-save" title="수정한 자막을 SRT 파일로 저장합니다 — 원본은 보존, <이름>_edit.srt 생성 (⌘S)">SRT 저장 <kbd>⌘S</kbd></button>
         </div>
         <div id="cue-list">
           <div id="empty">
             <p id="srt-hint">컷편집 결과 자막을 확인 중…</p><br>
             <kbd>W</kbd><kbd>S</kbd> 자막 이동 &nbsp; <kbd>A</kbd><kbd>D</kbd> 단어 이동 (플레이헤드 연동)<br>
-            클릭 = 단어 선택 · 한 번 더 = 단어 수정 · 더블클릭 = 문장 수정<br>
-            문장 수정 중: <kbd>⏎</kbd> 나누기 · <kbd>⇧⏎</kbd> 줄바꿈 · 맨 앞 <kbd>⌫</kbd> 병합 · <kbd>esc</kbd> 완료
+            <kbd>⏎</kbd> 선택 단어 앞에서 나누기 &nbsp; <kbd>⌫</kbd> 위와 병합 &nbsp; <kbd>⌦</kbd> 아래와 병합<br>
+            클릭 = 단어 선택 · 한 번 더 = 단어 수정 · 더블클릭 = 문장 수정
             <div class="actions"><button id="btn-open-manual">SRT 직접 열기</button></div>
           </div>
         </div>
@@ -590,25 +604,36 @@
       <p class="screen-title">설정</p>
       <p class="screen-sub">BangCut 동작에 필요한 키와 환경을 관리합니다</p>
 
-      <div class="set-card">
-        <h3>VITO 전사 API</h3>
-        <p class="desc">리턴제로 VITO는 한국어 정확도가 높은 유료 전사입니다. <b>developers.rtzr.ai</b>에서 발급받은 키를 입력하면 전사 모델에서 VITO를 선택할 수 있어요.</p>
-        <div class="set-field">
-          <label>CLIENT ID</label>
-          <input type="text" id="set-vito-id" placeholder="발급받은 CLIENT_ID">
+      <div class="set-card" id="card-vito">
+        <button class="set-head">
+          <span>VITO 전사 API</span>
+          <span class="badge" id="vito-head-badge"></span>
+          <span class="chev">▶</span>
+        </button>
+        <div class="set-body">
+          <p class="desc">리턴제로 VITO는 한국어 정확도가 높은 유료 전사입니다. <b>developers.rtzr.ai</b>에서 발급받은 키를 입력하면 전사 모델에서 VITO를 선택할 수 있어요.</p>
+          <div class="set-field">
+            <label>CLIENT ID</label>
+            <input type="text" id="set-vito-id" placeholder="발급받은 CLIENT_ID">
+          </div>
+          <div class="set-field">
+            <label>CLIENT SECRET</label>
+            <input type="password" id="set-vito-secret" placeholder="발급받은 CLIENT_SECRET">
+          </div>
+          <button class="primary" id="btn-save-vito">저장</button>
+          <p id="vito-status"></p>
         </div>
-        <div class="set-field">
-          <label>CLIENT SECRET</label>
-          <input type="password" id="set-vito-secret" placeholder="발급받은 CLIENT_SECRET">
-        </div>
-        <button class="primary" id="btn-save-vito">저장</button>
-        <p id="vito-status"></p>
       </div>
 
-      <div class="set-card">
-        <h3>설치 상태</h3>
-        <p class="set-info" id="env-info">확인 중…</p>
-        <button id="btn-recheck-env" style="margin-top:8px;">설치 상태 다시 확인</button>
+      <div class="set-card" id="card-env">
+        <button class="set-head">
+          <span>설치 상태</span>
+          <span class="chev">▶</span>
+        </button>
+        <div class="set-body">
+          <p class="set-info" id="env-info">확인 중…</p>
+          <button id="btn-recheck-env" style="margin-top:8px;">다시 확인</button>
+        </div>
       </div>
     </div>
   </section>

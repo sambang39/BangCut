@@ -45,6 +45,7 @@
       { keyCode: 123, altKey: true, shiftKey: true }, { keyCode: 124, altKey: true, shiftKey: true },
       { keyCode: 123, metaKey: true }, { keyCode: 124, metaKey: true },
       { keyCode: 0 }, { keyCode: 1 }, { keyCode: 2 }, { keyCode: 13 },
+      { keyCode: 36 }, { keyCode: 51 }, { keyCode: 117 },
       { keyCode: 6, metaKey: true },
       { keyCode: 6, metaKey: true, shiftKey: true },
       { keyCode: 3, metaKey: true },
@@ -97,7 +98,7 @@
     }
     if (id === "screen-cutedit") { refreshSeqInfo(); detectCutSource(); }
     if (id === "screen-editor") activateEditor();
-    if (id === "screen-settings") { loadVitoUi(); loadEnvInfo(); }
+    if (id === "screen-settings") loadVitoUi();
   }
 
   (function () {
@@ -418,6 +419,7 @@
   $("btn-vito-goto-settings").addEventListener("click", function () {
     $("vito-overlay").classList.remove("open");
     showScreen("screen-settings");
+    $("card-vito").classList.add("open");
     setTimeout(function () { $("set-vito-id").focus(); }, 50);
   });
   $("btn-vito-site").addEventListener("click", function () {
@@ -431,9 +433,29 @@
     return s.length <= 6 ? s : s.slice(0, 4) + "…" + s.slice(-2);
   }
 
+  (function () {
+    var cards = document.querySelectorAll(".set-card");
+    for (var i = 0; i < cards.length; i++) {
+      (function (card) {
+        var head = card.querySelector(".set-head");
+        head.addEventListener("click", function () {
+          var opening = !card.classList.contains("open");
+          card.classList.toggle("open", opening);
+          if (opening && card.id === "card-env") loadEnvInfo();
+          if (opening && card.id === "card-vito") loadVitoUi();
+        });
+      })(cards[i]);
+    }
+  })();
+
   function loadVitoUi() {
     var cfg = readEngineConfig();
     var has = !!(cfg.VITO_CLIENT_ID && cfg.VITO_CLIENT_SECRET);
+    var badge = $("vito-head-badge");
+    if (badge) {
+      badge.textContent = has ? "등록됨" : "미등록";
+      badge.className = "badge" + (has ? " ok" : "");
+    }
     $("set-vito-id").value = cfg.VITO_CLIENT_ID || "";
     $("set-vito-secret").value = "";
     $("set-vito-secret").placeholder = has ? "저장됨 — 변경할 때만 입력" : "발급받은 CLIENT_SECRET";
@@ -1190,6 +1212,9 @@
     var t = e.target;
     var inField = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA");
 
+    // 입력창 밖 Backspace는 CEP 브라우저의 '뒤로 가기'로 동작해 패널이 리셋됨 — 무조건 차단
+    if (e.code === "Backspace" && !inField) e.preventDefault();
+
     if (metaK && (e.key === "z" || e.key === "Z")) {
       if (current !== "screen-editor") return;
       e.preventDefault();
@@ -1223,8 +1248,17 @@
       case "KeyW": e.preventDefault(); moveCue(-1); break;
       case "KeyS": e.preventDefault(); moveCue(1); break;
       case "Enter":
+      case "NumpadEnter":
         e.preventDefault();
-        if (pointer.cue >= 0) openWordEdit(pointer.cue, pointer.word);
+        splitAtPointer();
+        break;
+      case "Backspace":
+        e.preventDefault();
+        if (pointer.cue > 0) mergeUp(pointer.cue);
+        break;
+      case "Delete":
+        e.preventDefault();
+        if (pointer.cue >= 0 && pointer.cue < cues.length - 1) mergeUp(pointer.cue + 1);
         break;
     }
   });
@@ -1482,7 +1516,7 @@
   $("btn-redo").addEventListener("click", doRedo);
   $("btn-save").addEventListener("click", saveSrt);
   $("btn-apply").addEventListener("click", applyToSequence);
-  $("btn-split").addEventListener("click", function () {
+  function splitAtPointer() {
     if (pointer.cue < 0) return;
     var toks = tokensOf(pointer.cue);
     if (pointer.word > 0 && pointer.word < toks.length) {
@@ -1490,7 +1524,9 @@
     } else {
       setStatus("나눌 위치의 단어를 선택하세요 (첫 단어 앞은 나눌 수 없음)", "err");
     }
-  });
+  }
+
+  $("btn-split").addEventListener("click", splitAtPointer);
   $("btn-merge-up").addEventListener("click", function () { if (pointer.cue > 0) mergeUp(pointer.cue); });
   $("btn-merge-down").addEventListener("click", function () {
     if (pointer.cue >= 0 && pointer.cue < cues.length - 1) mergeUp(pointer.cue + 1);
