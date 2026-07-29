@@ -321,6 +321,67 @@
   }
   #status.ok { color: var(--ok); }
   #status.err { color: var(--warn); }
+
+  /* ---------- 온보딩 모달 ---------- */
+  #onboard-overlay {
+    display: none;
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 50;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  #onboard-overlay.open { display: flex; }
+  #onboard-card {
+    background: #2b2b2b;
+    border: 1px solid #4a4a4a;
+    border-radius: 10px;
+    padding: 18px 16px 14px;
+    width: 100%; max-width: 400px;
+    max-height: 90%;
+    overflow-y: auto;
+  }
+  .ob-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .ob-sub { font-size: 11px; color: var(--text-dim); margin-bottom: 14px; line-height: 1.6; }
+  .ob-step { margin-bottom: 14px; }
+  .ob-step-head { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 7px; }
+  .ob-num {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .ob-num.done { background: var(--ok); }
+  .ob-step-head span.txt { font-size: 12px; line-height: 1.55; color: var(--text); }
+  .term {
+    background: #141414;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 9px 10px;
+    display: flex; gap: 8px; align-items: flex-start;
+    margin-left: 26px;
+  }
+  .term code {
+    flex: 1;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 10.5px; line-height: 1.6;
+    color: #c8e4c8;
+    word-break: break-all;
+    -webkit-user-select: text; user-select: text;
+  }
+  .term .copybtn {
+    background: none; border: none; padding: 2px;
+    color: var(--text-dim); flex-shrink: 0; cursor: pointer;
+  }
+  .term .copybtn:hover { color: #fff; background: none; }
+  .term .copybtn svg { width: 14px; height: 14px; fill: currentColor; }
+  .term .copybtn.copied { color: var(--ok); }
+  #ob-status { font-size: 11px; line-height: 1.8; margin: 4px 0 12px; color: var(--text-dim); }
+  #ob-status .ok { color: var(--ok); }
+  #ob-status .bad { color: var(--warn); }
+  #onboard-actions { display: flex; gap: 6px; }
+  #onboard-actions .grow { flex: 1; }
 </style>
 </head>
 <body>
@@ -477,6 +538,47 @@
       </aside>
     </div>
   </section>
+
+  <!-- 온보딩 (전제조건 미충족 안내) -->
+  <div id="onboard-overlay">
+    <div id="onboard-card">
+      <p class="ob-title">BangCut을 쓰려면 준비가 필요해요</p>
+      <p class="ob-sub">컷편집은 클로드 코드(Claude Code)가 이 맥에서 직접 수행합니다. 아래 두 단계를 마치면 바로 사용할 수 있어요.</p>
+
+      <div class="ob-step">
+        <div class="ob-step-head">
+          <span class="ob-num" id="ob-num1">1</span>
+          <span class="txt">클로드 데스크톱 / 클로드 코드를 설치하세요</span>
+        </div>
+        <div class="term">
+          <code id="ob-cmd1">curl -fsSL https://claude.ai/install.sh | bash</code>
+          <button class="copybtn" data-copy="ob-cmd1" title="복사">
+            <svg viewBox="0 0 16 16"><path d="M4 2h7a1 1 0 0 1 1 1v1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm2 4v7h7V6H6zM5 5h6V3H4v8h1V6a1 1 0 0 1 1-1z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="ob-step">
+        <div class="ob-step-head">
+          <span class="ob-num" id="ob-num2">2</span>
+          <span class="txt">클로드 코드 설치(권한 무시로 설정 필수) 후 <b>아래 프롬프트를 실행</b>하세요 — 프로젝트 클론과 설치까지 자동으로 진행됩니다</span>
+        </div>
+        <div class="term">
+          <code id="ob-cmd2">claude --dangerously-skip-permissions "https://github.com/sambang39/BangCut.git 을 클론하고 README의 설치 절차대로 셋업해줘"</code>
+          <button class="copybtn" data-copy="ob-cmd2" title="복사">
+            <svg viewBox="0 0 16 16"><path d="M4 2h7a1 1 0 0 1 1 1v1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm2 4v7h7V6H6zM5 5h6V3H4v8h1V6a1 1 0 0 1 1-1z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="ob-status"></div>
+
+      <div id="onboard-actions">
+        <button class="primary grow" id="btn-ob-recheck">다시 확인</button>
+        <button id="btn-ob-close">닫기</button>
+      </div>
+    </div>
+  </div>
 
   <script src="js/core.js"></script>
   <script src="js/main.js"></script>

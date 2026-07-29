@@ -370,6 +370,128 @@
     el.className = kind || "";
   }
 
+  // ============ 전제조건 감지 + 온보딩 (H2) ============
+
+  var prereq = { claude: false, claudePath: null, repo: false, venv: false, checked: false };
+
+  function checkPrereq(cb) {
+    var fsN = nodeReq("fs");
+    var cp = nodeReq("child_process");
+    var root = repoRoot();
+    prereq.repo = !!(root && fsN && fsN.existsSync(root + "/edit.sh"));
+    prereq.venv = !!(root && fsN && fsN.existsSync(root + "/.venv/bin/python"));
+    prereq.claude = false;
+    prereq.claudePath = null;
+
+    var home = "";
+    try { home = nodeReq("process").env.HOME || ""; } catch (e) {}
+    var candidates = [
+      home + "/.local/bin/claude",
+      "/usr/local/bin/claude",
+      "/opt/homebrew/bin/claude"
+    ];
+    if (fsN) {
+      for (var i = 0; i < candidates.length; i++) {
+        try {
+          if (fsN.existsSync(candidates[i])) { prereq.claude = true; prereq.claudePath = candidates[i]; break; }
+        } catch (e2) {}
+      }
+    }
+    function done() {
+      prereq.checked = true;
+      if (prereq.claudePath) localStorage.setItem("bangcutClaudePath", prereq.claudePath);
+      cb(prereq);
+    }
+    if (prereq.claude || !cp) { done(); return; }
+    // 후보 경로에 없으면 셸 PATH에서 탐색
+    var env = {};
+    try {
+      var pe = nodeReq("process").env;
+      for (var k in pe) env[k] = pe[k];
+    } catch (e3) {}
+    env.PATH = (env.PATH || "") + ":/usr/local/bin:/opt/homebrew/bin:" + home + "/.local/bin";
+    cp.exec("command -v claude", { env: env }, function (err, stdout) {
+      var p = String(stdout || "").trim();
+      if (!err && p) { prereq.claude = true; prereq.claudePath = p; }
+      done();
+    });
+  }
+
+  function renderObStatus() {
+    function line(ok, label) {
+      return '<span class="' + (ok ? "ok" : "bad") + '">' + (ok ? "✓" : "✗") + " " + label +
+        (ok ? "" : " — 위 단계를 진행해 주세요") + "</span><br>";
+    }
+    $("ob-status").innerHTML =
+      line(prereq.claude, "클로드 코드 " + (prereq.claude ? "설치됨" : "미설치")) +
+      line(prereq.repo && prereq.venv, "BangCut 프로젝트 " + (prereq.repo ? (prereq.venv ? "설치 완료" : "클론됨 (설치 미완료)") : "미설치"));
+    $("ob-num1").classList.toggle("done", prereq.claude);
+    $("ob-num1").textContent = prereq.claude ? "✓" : "1";
+    var step2ok = prereq.repo && prereq.venv;
+    $("ob-num2").classList.toggle("done", step2ok);
+    $("ob-num2").textContent = step2ok ? "✓" : "2";
+  }
+
+  function prereqOk() { return prereq.claude && prereq.repo && prereq.venv; }
+
+  function openOnboard() {
+    renderObStatus();
+    $("onboard-overlay").classList.add("open");
+  }
+  function closeOnboard() { $("onboard-overlay").classList.remove("open"); }
+
+  $("btn-ob-close").addEventListener("click", closeOnboard);
+  $("btn-ob-recheck").addEventListener("click", function () {
+    var b = $("btn-ob-recheck");
+    b.disabled = true;
+    b.textContent = "확인 중…";
+    checkPrereq(function () {
+      b.disabled = false;
+      b.textContent = "다시 확인";
+      renderObStatus();
+      if (prereqOk()) {
+        $("ob-status").innerHTML += '<span class="ok">모든 준비 완료 — 컷편집을 시작할 수 있습니다!</span>';
+        setTimeout(closeOnboard, 1200);
+      }
+    });
+  });
+
+  // 복사 버튼: 클릭 → ✓ 아이콘 2.5초 → 원복
+  var COPY_SVG = '<svg viewBox="0 0 16 16"><path d="M4 2h7a1 1 0 0 1 1 1v1h1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm2 4v7h7V6H6zM5 5h6V3H4v8h1V6a1 1 0 0 1 1-1z"/></svg>';
+  var CHECK_SVG = '<svg viewBox="0 0 16 16"><path d="M6.4 12.4 2.3 8.3l1.4-1.4 2.7 2.7 5.9-5.9 1.4 1.4z"/></svg>';
+
+  function copyText(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  (function () {
+    var btns = document.querySelectorAll(".copybtn");
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.addEventListener("click", function () {
+          var src = $(b.dataset.copy);
+          if (!src) return;
+          copyText(src.textContent);
+          b.innerHTML = CHECK_SVG;
+          b.classList.add("copied");
+          setTimeout(function () {
+            b.innerHTML = COPY_SVG;
+            b.classList.remove("copied");
+          }, 2500);
+        });
+      })(btns[i]);
+    }
+  })();
+
   // ============ 컷편집: 엔진 실행 (G) ============
 
   function repoRoot() {
@@ -412,6 +534,15 @@
   }
 
   function runCut() {
+    if (run.running) return;
+    // H2 게이트: 클로드 코드·프로젝트 설치 확인 후 진행
+    checkPrereq(function () {
+      if (!prereqOk()) { openOnboard(); return; }
+      runCutReady();
+    });
+  }
+
+  function runCutReady() {
     if (run.running) return;
     var cp = nodeReq("child_process");
     if (!cp) { cutStatus("Node 실행 환경을 찾지 못했습니다 (패널 재시작 필요)", "err"); return; }
