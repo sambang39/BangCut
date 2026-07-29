@@ -59,7 +59,8 @@
   var seqInfo = { name: null, fps: 30000 / 1001, src: null };
   var settings = {
     preset: "medium", PAD_LEAD: 0.22, MIN_SILENCE: 0.30, PAD_TAIL: 0.10,
-    srcMode: "track", fhd: true, sttModel: "whisper"
+    srcMode: "track", sttModel: "whisper",
+    resolution: "FHD", outFps: "원본"
   };
   var detectedSrt = null;
 
@@ -236,8 +237,7 @@
         run.sources = (okRange && seqInfo.src) ? [seqInfo.src] : [];
         st.innerHTML = okRange
           ? "In/Out 구간: <b>" + C.secondsToTimecode(inS, seqInfo.fps) + " ~ " +
-            C.secondsToTimecode(outS, seqInfo.fps) + "</b><br>" +
-            '<span class="err">구간 컷편집은 엔진 지원 예정 — 현재는 소스 전체 기준으로 실행됩니다</span>'
+            C.secondsToTimecode(outS, seqInfo.fps) + "</b>"
           : '<span class="err">In/Out 포인트가 없습니다. 시퀀스에 I/O를 찍어주세요</span>';
         return;
       }
@@ -297,7 +297,8 @@
     $("in-padlead").value = settings.PAD_LEAD;
     $("in-minsil").value = settings.MIN_SILENCE;
     $("in-padtail").value = settings.PAD_TAIL;
-    $("sw-fhd").classList.toggle("on", !!settings.fhd);
+    $("res-val").textContent = settings.resolution;
+    $("fps-val").textContent = settings.outFps;
     renderWave();
   }
 
@@ -336,11 +337,48 @@
     $(id).addEventListener("change", readCutInputs);
   });
 
-  $("sw-fhd").addEventListener("click", function () {
-    settings.fhd = !settings.fhd;
-    $("sw-fhd").classList.toggle("on", settings.fhd);
-    saveSettings(true);
-  });
+  // 상세 3필드 세모 스피너 (▲▼)
+  (function () {
+    var btns = document.querySelectorAll('#detail-grid .spin button');
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.addEventListener("click", function () {
+          var input = $(b.dataset.for);
+          try { b.className.indexOf("up") === 0 ? input.stepUp() : input.stepDown(); } catch (e) {}
+          readCutInputs();
+        });
+      })(btns[i]);
+    }
+  })();
+
+  // 출력 설정: 해상도/프레임 스핀 탭
+  var RES_STEPS = ["FHD", "4K"];
+  var FPS_STEPS = ["원본", "23.976", "24", "25", "29.97", "30", "50", "59.94", "60"];
+
+  function stepList(list, cur, dir) {
+    var i = list.indexOf(cur);
+    if (i === -1) i = 0;
+    return list[Math.max(0, Math.min(list.length - 1, i + dir))];
+  }
+
+  (function () {
+    var btns = document.querySelectorAll('#out-grid .spin button');
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        b.addEventListener("click", function () {
+          var dir = b.className.indexOf("up") === 0 ? 1 : -1;
+          if (b.dataset.spin === "res") {
+            settings.resolution = stepList(RES_STEPS, settings.resolution, dir);
+            $("res-val").textContent = settings.resolution;
+          } else {
+            settings.outFps = stepList(FPS_STEPS, settings.outFps, dir);
+            $("fps-val").textContent = settings.outFps;
+          }
+          saveSettings(true);
+        });
+      })(btns[i]);
+    }
+  })();
 
   // ============ 공백 길이 자동/수동 (H3) ============
 
@@ -388,9 +426,18 @@
     return !!(cfg.VITO_CLIENT_ID && cfg.VITO_CLIENT_SECRET);
   }
 
+  function whisperInstalled() {
+    var fsN = nodeReq("fs");
+    var root = repoRoot();
+    if (!fsN || !root) return false;
+    try { return fsN.existsSync(root + "/.venv/bin/mlx_whisper"); } catch (e) { return false; }
+  }
+
   function setModel(m, silent) {
-    if (m === "vito" && !vitoKeysPresent()) {
+    var vitoAsked = m === "vito";
+    if (vitoAsked && !vitoKeysPresent()) {
       if (!silent) $("vito-overlay").classList.add("open");
+      $("model-hint").textContent = "VITO — API 키 미등록. 설정 패널에서 API 키 등록 진행";
       m = "whisper";
     }
     settings.sttModel = m;
@@ -398,9 +445,13 @@
     for (var i = 0; i < btns.length; i++) {
       btns[i].classList.toggle("on", btns[i].dataset.model === m);
     }
-    $("model-hint").textContent = m === "vito"
-      ? "VITO — 리턴제로 API 전사 (키 등록됨)"
-      : "Whisper — 무료·로컬 실행, 설치만 하면 바로 사용";
+    if (m === "vito") {
+      $("model-hint").textContent = "VITO — API 키 등록됨";
+    } else if (!vitoAsked || vitoKeysPresent()) {
+      $("model-hint").textContent = whisperInstalled()
+        ? "Whisper — 무료 로컬 실행"
+        : "Whisper — 미설치 상태. 설치해야 사용 가능";
+    }
     saveSettings(true);
   }
 
@@ -543,8 +594,10 @@
         var s = JSON.parse(raw);
         // 비율 값은 복원하지 않음 — 항상 디폴트(자동 모드)로 시작 (사용자 확정)
         if (typeof s.srcMode === "string") settings.srcMode = s.srcMode;
-        if (typeof s.fhd === "boolean") settings.fhd = s.fhd;
         if (typeof s.sttModel === "string") settings.sttModel = s.sttModel;
+        if (typeof s.resolution === "string") settings.resolution = s.resolution;
+        if (typeof s.outFps === "string") settings.outFps = s.outFps;
+        if (typeof s.fhd === "boolean") settings.resolution = s.fhd ? "FHD" : "4K";
       } catch (e) {}
     }
   }
@@ -771,7 +824,7 @@
     var src = run.queue.shift();
     logLine("\n▶ " + src.split("/").pop());
     var args = [root + "/edit.sh", src];
-    if (settings.fhd) args.push("--fhd");
+    if (settings.resolution === "FHD") args.push("--fhd");
 
     var env = {};
     try {

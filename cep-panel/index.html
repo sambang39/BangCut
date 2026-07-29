@@ -93,7 +93,7 @@
   /* ---------- 앱 레이아웃: 좌측 사이드바 ---------- */
   #app { display: flex; height: 100%; }
   #sidebar {
-    width: 86px;
+    width: 118px;
     background: var(--bg-side);
     border-right: 1px solid var(--border);
     display: flex;
@@ -114,11 +114,12 @@
   .side-item {
     background: none; border: none; border-left: 2px solid transparent;
     border-radius: 0;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 10px 0 9px;
+    display: flex; flex-direction: row; align-items: center; gap: 8px;
+    padding: 10px 12px;
     color: var(--text-dim);
-    font-size: 10.5px;
+    font-size: 11.5px;
     cursor: pointer;
+    text-align: left;
   }
   .side-item:hover { background: #242424; color: var(--text); border-color: transparent; }
   .side-item.on {
@@ -126,7 +127,7 @@
     color: var(--accent-bright);
     border-left-color: var(--accent);
   }
-  .side-item svg { width: 17px; height: 17px; fill: currentColor; }
+  .side-item svg { width: 16px; height: 16px; fill: currentColor; flex-shrink: 0; }
   #side-spacer { flex: 1; }
   #side-ver { text-align: center; font-size: 9px; color: #4a4a4a; }
 
@@ -190,11 +191,52 @@
   }
   #wave-hint { text-align: center; font-size: 10px; color: var(--text-faint); margin-bottom: 16px; }
   #detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-  #detail-grid .unit-wrap { position: relative; }
-  #detail-grid .unit-wrap::after {
-    content: "초"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .unit-wrap { position: relative; }
+  .unit-wrap input { padding-right: 26px; }
+  .unit-wrap .unit {
+    position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
     color: var(--text-faint); font-size: 11px; pointer-events: none;
+    transition: right 0.12s;
   }
+  .unit-wrap:hover .unit { right: 24px; }
+  .spin {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 1px;
+    opacity: 0; transition: opacity 0.12s;
+  }
+  .unit-wrap:hover .spin, .spin-tab:hover .spin { opacity: 1; }
+  .spin button {
+    width: 15px; height: 10px;
+    background: none; border: none; border-radius: 2px;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim);
+  }
+  .spin button:hover { color: var(--accent-bright); background: rgba(63,169,245,0.12); }
+  .spin button::before { content: ""; display: block; }
+  .spin button.up::before {
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-bottom: 5px solid currentColor;
+  }
+  .spin button.down::before {
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+  }
+  /* 출력 설정 스핀 탭 */
+  #out-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .spin-tab {
+    position: relative;
+    background: var(--bg-input);
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    padding: 6px 26px 6px 9px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+  }
+  .spin-tab .lab { color: var(--text-faint); font-size: 10.5px; }
+  .spin-tab b { color: var(--text); font-weight: 600; margin-left: auto; }
   #model-row-wrap { margin-bottom: 14px; }
   #model-hint { font-size: 10.5px; color: var(--text-faint); margin-top: 4px; }
   #cut-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
@@ -480,7 +522,7 @@
       <div id="src-status">감지 중…</div>
 
       <div class="field-row-head">
-        <span class="field-label" style="margin:0;">공백 길이 — 말 사이에 남길 정적의 정도</span>
+        <span class="field-label" style="margin:0;">무음 구간 제거</span>
         <span class="seg-mini" id="gapmode-row">
           <button data-gap="auto" class="on">자동</button>
           <button data-gap="manual">수동</button>
@@ -500,15 +542,27 @@
         <div id="detail-grid">
           <div>
             <p class="field-label">말 끝나고 남길 여백</p>
-            <div class="unit-wrap"><input type="number" id="in-padlead" step="0.01" min="0" max="2"></div>
+            <div class="unit-wrap">
+              <input type="number" id="in-padlead" step="0.01" min="0" max="2">
+              <span class="unit">초</span>
+              <span class="spin"><button class="up" data-for="in-padlead" tabindex="-1"></button><button class="down" data-for="in-padlead" tabindex="-1"></button></span>
+            </div>
           </div>
           <div>
             <p class="field-label">최소 공백 제거 길이</p>
-            <div class="unit-wrap"><input type="number" id="in-minsil" step="0.01" min="0" max="3"></div>
+            <div class="unit-wrap">
+              <input type="number" id="in-minsil" step="0.01" min="0" max="3">
+              <span class="unit">초</span>
+              <span class="spin"><button class="up" data-for="in-minsil" tabindex="-1"></button><button class="down" data-for="in-minsil" tabindex="-1"></button></span>
+            </div>
           </div>
           <div>
             <p class="field-label">다음 말 시작 전 여백</p>
-            <div class="unit-wrap"><input type="number" id="in-padtail" step="0.01" min="0" max="2"></div>
+            <div class="unit-wrap">
+              <input type="number" id="in-padtail" step="0.01" min="0" max="2">
+              <span class="unit">초</span>
+              <span class="spin"><button class="up" data-for="in-padtail" tabindex="-1"></button><button class="down" data-for="in-padtail" tabindex="-1"></button></span>
+            </div>
           </div>
         </div>
       </div>
@@ -516,14 +570,22 @@
       <div id="model-row-wrap">
         <p class="field-label">전사 모델</p>
         <div class="seg-row" id="model-row" style="margin-bottom:0;">
-          <button data-model="whisper" class="on">Whisper <span style="color:var(--text-faint);font-size:10px;">무료</span></button>
-          <button data-model="vito">VITO <span style="color:var(--text-faint);font-size:10px;">API 키 필요</span></button>
+          <button data-model="whisper" class="on">Whisper</button>
+          <button data-model="vito">VITO</button>
         </div>
-        <p id="model-hint">Whisper — 무료·로컬 실행, 설치만 하면 바로 사용</p>
+        <p id="model-hint">Whisper — 무료 로컬 실행</p>
       </div>
 
-      <div id="cut-opts">
-        <span class="switch on" id="sw-fhd"><span class="knob"></span>FHD로 출력 (4K → 1080p)</span>
+      <p class="field-label">출력 설정</p>
+      <div id="out-grid">
+        <div class="spin-tab">
+          <span class="lab">해상도</span><b id="res-val">FHD</b>
+          <span class="spin"><button class="up" data-spin="res" tabindex="-1"></button><button class="down" data-spin="res" tabindex="-1"></button></span>
+        </div>
+        <div class="spin-tab">
+          <span class="lab">프레임</span><b id="fps-val">원본</b>
+          <span class="spin"><button class="up" data-spin="fps" tabindex="-1"></button><button class="down" data-spin="fps" tabindex="-1"></button></span>
+        </div>
       </div>
 
       <div id="cutedit-actions">
