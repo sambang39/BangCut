@@ -1,0 +1,33 @@
+# 사용자 개인 설정 (VITO 키 등 — 예시는 config.json.example)
+config.json
+
+# 결과물 (개인 영상 처리 결과 — 절대 커밋 X)
+output/
+**/BangCut/
+
+# 미디어 파일
+*.mp4
+*.mov
+*.m4v
+*.mkv
+*.wav
+*.mp3
+*.aac
+*.m4a
+
+# 파이썬 캐시 / 가상환경
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 백업/작업 중간물
+**/_backup/
+**/_workspace/
+
+# 내부 개발 문서
+cep-panel/PLAN.md
+
+# macOS
+.DS_Store

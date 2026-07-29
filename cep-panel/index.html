@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>BangCut</title>
+<style>
+  :root {
+    --bg: #232323;
+    --bg-elev: #2b2b2b;
+    --bg-elev2: #303030;
+    --bg-input: #1c1c1c;
+    --border: #3a3a3a;
+    --border-soft: #2e2e2e;
+    --text: #d6d6d6;
+    --text-dim: #8a8a8a;
+    --text-faint: #5c5c5c;
+    --accent: #2d8ceb;
+    --accent-bright: #3fa9f5;
+    --accent-dark: #1d5c9c;
+    --sel-bg: #16324b;
+    --warn: #e06c5c;
+    --ok: #6cbf6c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .mono { font-family: "SF Mono", Menlo, monospace; }
+
+  button {
+    background: var(--bg-elev2);
+    color: var(--text);
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { background: #3c3c3c; border-color: #5a5a5a; }
+  button:active { transform: translateY(0.5px); }
+  button:disabled { opacity: 0.35; cursor: default; transform: none; }
+  button:disabled:hover { background: var(--bg-elev2); border-color: #4a4a4a; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--accent-bright); border-color: var(--accent-bright); }
+  button.danger { border-color: var(--warn); color: var(--warn); background: none; }
+  button.icon-btn { padding: 4px 7px; display: inline-flex; align-items: center; gap: 4px; }
+  button.icon-btn svg { width: 13px; height: 13px; fill: currentColor; }
+  kbd {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid #4a4a4a;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  input[type="number"], input[type="text"] {
+    background: var(--bg-input);
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 8px;
+    width: 100%;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+
+  /* 토글 스위치 */
+  .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: var(--text-dim); }
+  .switch .knob {
+    width: 28px; height: 15px; border-radius: 8px;
+    background: #4a4a4a; position: relative; transition: background 0.15s; flex-shrink: 0;
+  }
+  .switch .knob::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 11px; height: 11px; border-radius: 50%; background: #cfcfcf;
+    transition: left 0.15s;
+  }
+  .switch.on .knob { background: var(--accent); }
+  .switch.on .knob::after { left: 15px; }
+  .switch.on { color: var(--text); }
+
+  /* ---------- 앱바 ---------- */
+  #appbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #btn-back { background: none; border: none; padding: 2px 6px; color: var(--text-dim); font-size: 15px; display: none; }
+  #btn-back:hover { color: var(--text); background: none; }
+  #logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.2px; }
+  #logo .cut { color: var(--accent-bright); }
+  #appbar-title { font-size: 12px; color: var(--text); font-weight: 600; display: none; }
+  #seq-name {
+    margin-left: auto; font-size: 11px; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%;
+  }
+
+  .screen { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  /* ---------- 홈 ---------- */
+  #screen-home { overflow-y: auto; padding: 14px; gap: 12px; }
+  .step-card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .step-num.dim { background: #4a4a4a; color: var(--text); }
+  .step-title { font-size: 13px; font-weight: 600; color: #fff; }
+  .step-badge { margin-left: auto; font-size: 10px; }
+  .step-badge.ok { color: var(--ok); }
+  .step-badge.none { color: var(--text-faint); }
+  .step-desc { color: var(--text-dim); font-size: 11px; line-height: 1.6; margin-bottom: 11px; }
+  .step-desc b { color: var(--text); font-weight: 600; }
+  .step-actions { display: flex; gap: 6px; }
+  .step-actions .grow { flex: 1; }
+
+  /* ---------- 컷편집 설정 ---------- */
+  #screen-cutedit { overflow-y: auto; padding: 14px; }
+  .field-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
+  .seg-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .seg-row button { flex: 1; padding: 7px 0; font-size: 11px; }
+  .seg-row button.on {
+    background: var(--sel-bg); border-color: var(--accent);
+    color: var(--accent-bright); font-weight: 600;
+  }
+  #src-status {
+    font-size: 11px; color: var(--text-dim); line-height: 1.6;
+    background: var(--bg-input); border-radius: 5px;
+    padding: 8px 10px; margin-bottom: 16px; min-height: 33px;
+    -webkit-user-select: text; user-select: text;
+  }
+  #src-status b { color: var(--text); }
+  #src-status .err { color: var(--warn); }
+  #wave-box {
+    background: var(--bg-input); border-radius: 6px;
+    padding: 18px 10px 14px;
+    display: flex; align-items: center; justify-content: center; gap: 3px;
+    margin-bottom: 5px; min-height: 76px;
+  }
+  .wave-bars { display: flex; gap: 2px; align-items: center; }
+  .wave-bars span { width: 3px; background: var(--text); border-radius: 1px; }
+  .wave-pad { border-top: 2px dotted var(--text-dim); position: relative; flex-shrink: 0; transition: width 0.18s; }
+  .wave-pad em {
+    position: absolute; top: 4px; left: 0; right: 0;
+    text-align: center; font-size: 9px; font-style: normal; color: var(--text-dim); white-space: nowrap;
+  }
+  #wave-cut {
+    background: var(--sel-bg); border: 1px dashed var(--accent); color: var(--accent-bright);
+    font-size: 10px; padding: 9px 0; border-radius: 4px; text-align: center;
+    transition: width 0.18s; flex-shrink: 0;
+  }
+  #wave-hint { text-align: center; font-size: 10px; color: var(--text-faint); margin-bottom: 16px; }
+  #detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
+  #detail-grid .unit-wrap { position: relative; }
+  #detail-grid .unit-wrap::after {
+    content: "초"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    color: var(--text-faint); font-size: 11px; pointer-events: none;
+  }
+  #cut-note { font-size: 10px; color: var(--text-faint); line-height: 1.6; margin-bottom: 12px; }
+  #cut-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  #cutedit-actions { display: flex; gap: 6px; }
+  #cutedit-actions .grow { flex: 1; }
+  #cut-status { margin-top: 10px; font-size: 11px; color: var(--text-dim); min-height: 16px; line-height: 1.6; }
+  #cut-status.ok { color: var(--ok); }
+  #cut-status.err { color: var(--warn); }
+  #run-log {
+    display: none;
+    margin-top: 10px;
+    background: var(--bg-input); border-radius: 5px;
+    padding: 8px 10px;
+    font-family: "SF Mono", Menlo, monospace; font-size: 10px; line-height: 1.55;
+    color: var(--text-dim);
+    max-height: 180px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+    -webkit-user-select: text; user-select: text;
+  }
+  #run-log.open { display: block; }
+
+  /* ---------- 자막 편집 ---------- */
+  #editor-body { flex: 1; display: flex; overflow: hidden; position: relative; }
+  #editor-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  #editor-toolbar {
+    display: flex; align-items: center; gap: 5px;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #editor-file {
+    font-size: 11px; color: var(--text-dim);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1; min-width: 40px;
+  }
+  #editor-actionbar {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    background: #282828;
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  #editor-actionbar button { padding: 3px 8px; font-size: 11px; }
+  #editor-actionbar kbd { margin-left: 2px; }
+
+  #cue-list { flex: 1; overflow-y: auto; }
+  .row {
+    display: flex; gap: 9px;
+    padding: 6px 10px 6px 8px;
+    border-bottom: 1px solid var(--border-soft);
+    border-left: 2px solid transparent;
+    align-items: flex-start;
+  }
+  .row:hover { background: var(--bg-elev); }
+  .row.selected { background: var(--sel-bg); border-left-color: var(--accent); }
+  .row .meta { width: 88px; flex-shrink: 0; padding-top: 3px; line-height: 1.5; }
+  .row .meta .idx { font-size: 10px; color: var(--text-faint); }
+  .row .meta .idx .cc.over { color: var(--warn); font-weight: 700; }
+  .row .meta .tc { font-size: 11px; color: var(--text-dim); }
+  .row.selected .meta .tc { color: var(--accent-bright); }
+
+  .row .flow {
+    flex: 1; font-size: 13px; line-height: 1.9;
+    padding: 2px 0; min-width: 0; cursor: default;
+  }
+  .row .flow .w {
+    padding: 1px 3px; margin: 0 -1px;
+    border-radius: 3px; cursor: pointer;
+  }
+  .row .flow .w:hover { background: rgba(63,169,245,0.18); }
+  .row .flow .w.pt { background: var(--accent); color: #fff; }
+  .row .flow .w.hit { background: rgba(63,169,245,0.22); color: var(--accent-bright); }
+  .row .flow .w.pt.hit { background: var(--accent); color: #fff; }
+  .row.too-long .flow { box-shadow: inset 2px 0 0 rgba(224,108,92,0.55); padding-left: 6px; }
+
+  .row .flow input.w-edit {
+    width: auto; display: inline-block;
+    font-size: 13px; padding: 1px 4px;
+    border-color: var(--accent-bright);
+    background: var(--bg-input);
+  }
+  .row textarea.sent-edit {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    color: #fff;
+    font-family: inherit; font-size: 13px; line-height: 1.5;
+    padding: 3px 5px;
+    resize: none; overflow: hidden;
+    -webkit-user-select: text; user-select: text;
+  }
+  .row textarea.sent-edit:focus { outline: none; }
+  .row .btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .row .btns button {
+    padding: 0 5px; font-size: 10px; line-height: 1.7;
+    background: none; border-color: transparent; color: var(--text-faint);
+  }
+  .row .btns button:hover { color: var(--text); border-color: #4a4a4a; background: var(--bg-elev2); }
+
+  #empty { padding: 44px 20px; text-align: center; color: var(--text-dim); line-height: 2.1; font-size: 12px; }
+
+  /* ---------- 찾기/바꾸기 드로어 ---------- */
+  #find-drawer {
+    display: none;
+    width: 240px; max-width: 68%;
+    border-left: 1px solid var(--border);
+    background: #262626;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  #find-drawer.open { display: flex; }
+  #find-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px 6px;
+    font-size: 12px; font-weight: 600; color: #fff;
+  }
+  #find-controls { padding: 0 12px 8px; border-bottom: 1px solid var(--border); }
+  #find-controls .toggles { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+  #replace-wrap { margin-top: 8px; display: none; }
+  #replace-wrap.open { display: block; }
+  #find-count-line { padding: 8px 12px 4px; font-size: 11px; color: var(--text-dim); }
+  #find-results { flex: 1; overflow-y: auto; }
+  .fr {
+    display: flex; gap: 7px; align-items: flex-start;
+    padding: 5px 12px;
+    cursor: pointer; font-size: 11px; line-height: 1.5;
+  }
+  .fr:hover { background: var(--bg-elev); }
+  .fr.cur { background: var(--sel-bg); }
+  .fr .tc { color: var(--text-dim); flex-shrink: 0; font-size: 10px; padding-top: 1px; }
+  .fr .txt { color: var(--text); min-width: 0; word-break: break-all; }
+  .fr .txt mark { background: none; color: var(--accent-bright); font-weight: 700; }
+  #find-actions { padding: 8px 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+  #find-actions button { width: 100%; }
+  #btn-find-close-drawer { background: none; border: none; color: var(--text-dim); }
+  #btn-find-close-drawer:hover { color: var(--text); }
+
+  #statusbar {
+    padding: 6px 10px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-dim);
+    display: flex; justify-content: space-between; gap: 8px;
+    flex-shrink: 0; min-height: 27px;
+  }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--warn); }
+</style>
+</head>
+<body>
+  <div id="appbar">
+    <button id="btn-back" title="홈으로">←</button>
+    <span id="logo">Bang<span class="cut">Cut</span></span>
+    <span id="appbar-title"></span>
+    <span id="seq-name">시퀀스 확인 중…</span>
+  </div>
+
+  <!-- 홈 -->
+  <section id="screen-home" class="screen active">
+    <div class="step-card">
+      <div class="step-head">
+        <span class="step-num">1</span>
+        <span class="step-title">자동 컷편집</span>
+        <span class="step-badge none" id="step1-badge"></span>
+      </div>
+      <p class="step-desc" id="step1-desc">
+        무음 구간 제거를 포함한 자동 컷편집.<br>
+        소스: <b id="src-name">감지 중…</b>
+      </p>
+      <div class="step-actions">
+        <button class="primary grow" id="btn-goto-cutedit">컷편집 설정</button>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-head">
+        <span class="step-num dim">2</span>
+        <span class="step-title">자막 편집</span>
+        <span class="step-badge none" id="step2-badge">SRT 없음</span>
+      </div>
+      <p class="step-desc">
+        컷편집 결과 자막을 불러와 수정한 뒤 시퀀스에 적용합니다.<br>
+        연결: <b id="srt-name">—</b>
+      </p>
+      <div class="step-actions">
+        <button class="grow" id="btn-open-editor" disabled>자막 편집 열기</button>
+        <button id="btn-open-manual">SRT 직접 열기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 컷편집 설정 -->
+  <section id="screen-cutedit" class="screen">
+    <p class="field-label">컷편집 대상</p>
+    <div class="seg-row" id="srcmode-row">
+      <button data-mode="selection">선택한 클립</button>
+      <button data-mode="track" class="on">V1 트랙 전체</button>
+      <button data-mode="inout">In/Out 구간</button>
+    </div>
+    <div id="src-status">감지 중…</div>
+
+    <p class="field-label">공백 길이 — 말 사이에 남길 정적의 정도</p>
+    <div class="seg-row" id="preset-row"></div>
+
+    <div id="wave-box">
+      <span class="wave-bars" id="wave-left"></span>
+      <span class="wave-pad" id="wave-pad-lead"><em id="wave-pad-lead-v"></em></span>
+      <span id="wave-cut">✂ 제거</span>
+      <span class="wave-pad" id="wave-pad-tail"><em id="wave-pad-tail-v"></em></span>
+      <span class="wave-bars" id="wave-right"></span>
+    </div>
+    <p id="wave-hint">선택한 프리셋에 따라 잘리는 구간이 달라집니다</p>
+
+    <div id="detail-grid">
+      <div>
+        <p class="field-label">말 끝나고 남길 여백</p>
+        <div class="unit-wrap"><input type="number" id="in-padlead" step="0.01" min="0" max="2"></div>
+      </div>
+      <div>
+        <p class="field-label">최소 공백 제거 길이</p>
+        <div class="unit-wrap"><input type="number" id="in-minsil" step="0.01" min="0" max="3"></div>
+      </div>
+      <div>
+        <p class="field-label">다음 말 시작 전 여백</p>
+        <div class="unit-wrap"><input type="number" id="in-padtail" step="0.01" min="0" max="2"></div>
+      </div>
+    </div>
+    <p id="cut-note">이 값은 엔진(auto_cut)의 PAD_LEAD · MIN_SILENCE · PAD_TAIL로 전달됩니다.</p>
+
+    <div id="cut-opts">
+      <span class="switch on" id="sw-fhd"><span class="knob"></span>FHD로 출력 (4K → 1080p)</span>
+    </div>
+
+    <div id="cutedit-actions">
+      <button class="grow" id="btn-save-settings">설정 저장</button>
+      <button class="primary grow" id="btn-run-cut">컷편집 시작</button>
+      <button class="danger" id="btn-stop-cut" style="display:none;">중단</button>
+    </div>
+    <p id="cut-status"></p>
+    <div id="run-log"></div>
+  </section>
+
+  <!-- 자막 편집 -->
+  <section id="screen-editor" class="screen">
+    <div id="editor-body">
+      <div id="editor-main">
+        <div id="editor-toolbar">
+          <span id="editor-file">—</span>
+          <button class="icon-btn" id="btn-undo" title="실행 취소 (⌘Z)" disabled>
+            <svg viewBox="0 0 16 16"><path d="M6.5 3 2 7l4.5 4V8.2c3 0 5.3.8 6.9 3.3-.4-4-2.9-6.6-6.9-6.9V3z"/></svg>실행 취소
+          </button>
+          <button class="icon-btn" id="btn-redo" title="다시 실행 (⇧⌘Z)" disabled>
+            <svg viewBox="0 0 16 16"><path d="M9.5 3 14 7l-4.5 4V8.2c-3 0-5.3.8-6.9 3.3.4-4 2.9-6.6 6.9-6.9V3z"/></svg>다시 실행
+          </button>
+          <button class="primary" id="btn-apply">시퀀스에 적용</button>
+        </div>
+        <div id="editor-actionbar">
+          <button id="btn-split" title="포인트된 단어 앞에서 자막을 둘로 나눕니다 (문장 수정 중엔 커서 위치)">나누기 <kbd>⏎</kbd></button>
+          <button id="btn-merge-up" title="선택한 자막을 앞줄과 합칩니다">위와 병합</button>
+          <button id="btn-merge-down" title="선택한 자막을 다음 줄과 합칩니다">아래와 병합</button>
+          <button class="icon-btn" id="btn-find" title="검색/바꾸기 (⌘F)">
+            <svg viewBox="0 0 16 16"><path d="M11.2 10a5 5 0 1 0-1.2 1.2l3.2 3.2 1.2-1.2-3.2-3.2zM7 10.5A3.5 3.5 0 1 1 7 3.5a3.5 3.5 0 0 1 0 7z"/></svg>검색
+          </button>
+          <button id="btn-save" title="수정본 SRT 저장 (⌘S)">저장 <kbd>⌘S</kbd></button>
+        </div>
+        <div id="cue-list">
+          <div id="empty">
+            자막 파일을 불러오세요<br><br>
+            <kbd>W</kbd><kbd>S</kbd> 자막 이동 &nbsp; <kbd>A</kbd><kbd>D</kbd> 단어 이동 (플레이헤드 연동)<br>
+            클릭 = 단어 선택 · 한 번 더 = 단어 수정 · 더블클릭 = 문장 수정<br>
+            문장 수정 중: <kbd>⏎</kbd> 나누기 · <kbd>⇧⏎</kbd> 줄바꿈 · 맨 앞 <kbd>⌫</kbd> 병합 · <kbd>esc</kbd> 완료
+          </div>
+        </div>
+        <div id="statusbar">
+          <span id="status">준비</span>
+          <span id="summary"></span>
+        </div>
+      </div>
+
+      <aside id="find-drawer">
+        <div id="find-head">
+          <span>검색/바꾸기</span>
+          <button id="btn-find-close-drawer" title="닫기 (esc)">✕</button>
+        </div>
+        <div id="find-controls">
+          <input type="text" id="find-input" placeholder="검색어">
+          <div class="toggles">
+            <span class="switch" id="sw-whole"><span class="knob"></span>단어 전체 일치</span>
+            <span class="switch" id="sw-replace"><span class="knob"></span>바꾸기</span>
+          </div>
+          <div id="replace-wrap">
+            <input type="text" id="replace-input" placeholder="바꿀 단어">
+          </div>
+        </div>
+        <div id="find-count-line">0건</div>
+        <div id="find-results"></div>
+        <div id="find-actions">
+          <button id="btn-replace-one" style="display:none;">바꾸기</button>
+          <button id="btn-replace-all" style="display:none;">모두 바꾸기</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <script src="js/core.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

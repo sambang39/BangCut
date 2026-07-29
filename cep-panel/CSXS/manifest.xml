@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ExtensionManifest
+  Version="6.0"
+  ExtensionBundleId="com.bangcut"
+  ExtensionBundleVersion="0.1.0"
+  ExtensionBundleName="BangCut"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+>
+<ExtensionList>
+  <Extension Id="com.bangcut.panel" Version="0.1.0" />
+</ExtensionList>
+<ExecutionEnvironment>
+  <HostList>
+    <Host Name="PPRO" Version="[0.0,99.9]" />
+  </HostList>
+  <LocaleList>
+    <Locale Code="All" />
+  </LocaleList>
+  <RequiredRuntimeList>
+    <RequiredRuntime Name="CSXS" Version="9.0" />
+  </RequiredRuntimeList>
+</ExecutionEnvironment>
+<DispatchInfoList>
+  <Extension Id="com.bangcut.panel">
+    <DispatchInfo>
+      <Resources>
+        <MainPath>./index.html</MainPath>
+        <ScriptPath>./jsx/host.jsx</ScriptPath>
+        <CEFCommandLine>
+          <Parameter>--v=0</Parameter>
+          <Parameter>--enable-nodejs</Parameter>
+          <Parameter>--mixed-context</Parameter>
+        </CEFCommandLine>
+      </Resources>
+      <Lifecycle>
+        <AutoVisible>true</AutoVisible>
+      </Lifecycle>
+      <UI>
+        <Type>Panel</Type>
+        <Menu>BangCut</Menu>
+        <Geometry>
+          <Size>
+            <Width>460</Width>
+            <Height>700</Height>
+          </Size>
+          <MinSize>
+            <Width>320</Width>
+            <Height>400</Height>
+          </MinSize>
+        </Geometry>
+      </UI>
+    </DispatchInfo>
+  </Extension>
+</DispatchInfoList>
+</ExtensionManifest>
