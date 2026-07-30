@@ -341,7 +341,7 @@
       if (!files || !files.length) return;
       if (files.length > 1) srcErr("한 번에 한 개의 원테이크 영상만 — 첫 번째 파일을 사용합니다");
       var p = files[0].path;
-      if (!p) { srcErr("드롭에서 경로를 읽지 못했습니다 — 클릭해서 파일을 선택해 주세요"); return; }
+      if (!p) { srcErr("드래그 앤 드롭 경로를 읽지 못했습니다 — 클릭해서 파일을 선택해 주세요"); return; }
       selectSource(p);
     });
     // 패널 전역에서 드롭존 밖 드롭으로 페이지가 파일로 이동하는 것 방지
