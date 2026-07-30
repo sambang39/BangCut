@@ -197,6 +197,83 @@ function bangImportToBin(filePath) {
     } catch (err) { return "ERR:" + err; }
 }
 
+// BangCut 빈 찾기/생성 (공용)
+function bangGetBin() {
+    var root = app.project.rootItem;
+    for (var i = 0; i < root.children.numItems; i++) {
+        var c = root.children[i];
+        if (c && c.name === "BangCut" && c.type === ProjectItemType.BIN) return c;
+    }
+    return root.createBin("BangCut");
+}
+
+// 컷편집 결과(XML 시퀀스 + SRT)를 BangCut 빈으로 임포트하고 컷 시퀀스를 타임라인에 연다
+function bangOpenCutResult(xmlPath, srtPath) {
+    try {
+        var proj = app.project;
+        if (!proj) return "ERR:열린 프로젝트가 없습니다";
+        var fx = new File(xmlPath);
+        if (!fx.exists) return "ERR:XML이 없습니다: " + xmlPath;
+
+        var root = proj.rootItem;
+        var bin = bangGetBin();
+        if (!bin) return "ERR:BangCut 빈 생성 실패";
+
+        // 기존 시퀀스 ID 스냅샷 (새로 생긴 시퀀스를 찾기 위해)
+        var beforeIds = {};
+        for (var s = 0; s < proj.sequences.numSequences; s++) {
+            beforeIds[String(proj.sequences[s].sequenceID)] = 1;
+        }
+        var beforeN = root.children.numItems;
+
+        proj.importFiles([xmlPath], true, bin, false);
+
+        // XML 임포트가 루트에 떨어뜨린 새 아이템들을 BangCut 빈으로 이동
+        var strays = [];
+        for (var m = beforeN; m < root.children.numItems; m++) {
+            if (root.children[m]) strays.push(root.children[m]);
+        }
+        for (var t = 0; t < strays.length; t++) {
+            try { strays[t].moveBin(bin); } catch (eMv) {}
+        }
+
+        // SRT도 빈으로 임포트 (중복 방지)
+        var srtNote = "";
+        try {
+            var fs2 = new File(srtPath);
+            if (fs2.exists) {
+                var want = fs2.displayName;
+                var dup = false;
+                for (var j = 0; j < bin.children.numItems; j++) {
+                    if (bin.children[j] && bin.children[j].name === want) { dup = true; break; }
+                }
+                if (!dup) {
+                    var bN = root.children.numItems;
+                    proj.importFiles([srtPath], true, bin, false);
+                    for (var k = bN; k < root.children.numItems; k++) {
+                        if (root.children[k] && root.children[k].name === want) {
+                            try { root.children[k].moveBin(bin); } catch (eMv2) {}
+                        }
+                    }
+                }
+            } else { srtNote = " (SRT 없음)"; }
+        } catch (eSrt) { srtNote = " (SRT 임포트 실패)"; }
+
+        // 새로 생긴 시퀀스를 활성화 → 타임라인에 열림
+        var newSeq = null;
+        for (var s2 = 0; s2 < proj.sequences.numSequences; s2++) {
+            if (!beforeIds[String(proj.sequences[s2].sequenceID)]) { newSeq = proj.sequences[s2]; break; }
+        }
+        if (newSeq) {
+            var opened = false;
+            try { proj.activeSequence = newSeq; opened = true; } catch (eA) {}
+            if (!opened) { try { proj.openSequence(newSeq.sequenceID); opened = true; } catch (eB) {} }
+            return "OK:컷 시퀀스가 타임라인에 열렸습니다 — " + newSeq.name + srtNote;
+        }
+        return "OK:임포트 완료 — 시퀀스는 프로젝트 창 BangCut 폴더에서 열어주세요" + srtNote;
+    } catch (err) { return "ERR:" + err; }
+}
+
 // 패널 연결 확인용
 function bangPing() {
     return "PONG " + app.version;

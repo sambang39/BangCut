@@ -984,10 +984,33 @@
       renderSteps();
       $("prog-title").textContent = "완료!";
       setPct(100);
-      cutStatus("컷편집 완료 — 자막을 불러옵니다", "ok");
-      refreshSeqInfo(function () {
-        if (detectedSrt && detectedSrt !== srtPath) loadFile(detectedSrt); // 새 결과로 교체 + 자막 편집 탭 전환
-      });
+      cutStatus("컷편집 완료 — 결과를 프로젝트로 가져옵니다", "ok");
+      // H6: XML+SRT를 BangCut 빈으로 임포트하고 컷 시퀀스를 타임라인에 연다
+      var outdir = source.path.replace(/\/[^\/]+$/, "") + "/BangCut";
+      var base = source.path.split("/").pop().replace(/\.[^.]+$/, "");
+      var xml = outdir + "/" + base + "_cut.xml";
+      var srt = outdir + "/" + base + "_cut.srt";
+      var importDone = function () {
+        refreshSeqInfo(function () {
+          if (detectedSrt && detectedSrt !== srtPath) loadFile(detectedSrt); // 새 자막으로 교체 + 자막 편집 탭 전환
+        });
+      };
+      if (statOk(xml)) {
+        evalScript("bangOpenCutResult(" + JSON.stringify(xml) + "," + JSON.stringify(srt) + ")", function (res) {
+          res = String(res || "");
+          if (res.indexOf("OK") === 0) {
+            cutStatus(res.replace(/^OK:?/, ""), "ok");
+            logLine("== " + res.replace(/^OK:?/, ""));
+          } else {
+            cutStatus(res.replace(/^ERR:?/, "결과 임포트 실패: "), "err");
+            logLine("== " + res);
+          }
+          importDone();
+        });
+      } else {
+        cutStatus("완료됐지만 XML을 찾지 못했습니다: " + xml, "err");
+        importDone();
+      }
     } else {
       $("prog-title").textContent = "중단됨";
       cutStatus(msg || "실패 — '자세히 보기'에서 로그를 확인하세요", "err");
