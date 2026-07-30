@@ -927,6 +927,7 @@
     $("btn-run-cut").disabled = on || !(source.path && source.imported);
     $("btn-run-cut").textContent = on ? "실행 중…" : "컷편집 시작";
     $("btn-stop-cut").style.display = on ? "inline-block" : "none";
+    $("cut-options").classList.toggle("off", on); // 실행 중 옵션 전체 잠금
     if (on) $("prog-wrap").style.display = "block";
   }
 

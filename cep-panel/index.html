@@ -206,6 +206,8 @@
   #src-card span { font-size: 11px; color: var(--text-dim); }
   #src-err { font-size: 11px; color: var(--warn); margin: -10px 0 12px; min-height: 0; }
 
+  #cut-options { transition: opacity 0.15s; }
+  #cut-options.off { opacity: 0.4; pointer-events: none; }
   #manual-wrap { transition: opacity 0.15s; }
   #manual-wrap.off { opacity: 0.35; pointer-events: none; }
   #auto-note {
@@ -584,6 +586,7 @@
     <div class="screen-pad">
       <p class="screen-title" style="margin-bottom:12px;">자동 컷편집</p>
 
+      <div id="cut-options">
       <p class="field-label">컷편집 대상</p>
       <div id="dropzone">
         <svg viewBox="0 0 24 24"><path d="M12 3l4 4h-3v6h-2V7H8l4-4zM5 14h2v4h10v-4h2v4a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-4z"/></svg>
@@ -662,6 +665,8 @@
           <button data-res="4K">4K</button>
         </div>
         <p id="res-hint">FHD — 4K 소스를 1080p 시퀀스에 맞춰 배치</p>
+      </div>
+
       </div>
 
       <div id="cutedit-actions">
