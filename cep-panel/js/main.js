@@ -961,6 +961,11 @@
     L.push("###STEP:2:영상 분석 / ###STEP:3:전사 / ###STEP:4:컷 계획 / ###STEP:5:렌더 / ###STEP:6:자막 정리");
     L.push("(엔진 출력에서 받아쓰기·무음/컷·XML/렌더·자막 단계가 관찰될 때 해당 마커를 출력하면 된다)");
     L.push("결과 검수(과도한 컷·어미 잘림 확인) 후 성공이면 마지막 줄에 ###DONE, 실패면 ###FAIL:<한 줄 사유> 를 출력하라.");
+    L.push("");
+    L.push("절대 규칙: ###DONE 또는 ###FAIL을 출력하기 전에는 어떤 경우에도 응답을 끝내지 말라.");
+    L.push("분석·전사·렌더가 수십 분 걸려도 백그라운드 출력을 계속 폴링하며 끝까지 기다려라.");
+    L.push("'기다리는 중입니다', '분석이 끝나면 실행합니다' 같은 중간 보고로 턴을 마치는 것은 실패다.");
+    L.push("최종 산출물(_cut.xml과 _cut.srt)이 결과 폴더에 실제로 존재하는 것을 ls로 확인한 뒤에만 ###DONE을 출력하라.");
     return L.join("\n");
   }
 
@@ -978,8 +983,10 @@
       renderSteps();
       $("prog-title").textContent = "완료!";
       setPct(100);
-      cutStatus("컷편집 완료 — 자막 편집 탭에서 이어서 작업하세요", "ok");
-      refreshSeqInfo();
+      cutStatus("컷편집 완료 — 자막을 불러옵니다", "ok");
+      refreshSeqInfo(function () {
+        if (detectedSrt && detectedSrt !== srtPath) loadFile(detectedSrt); // 새 결과로 교체 + 자막 편집 탭 전환
+      });
     } else {
       $("prog-title").textContent = "중단됨";
       cutStatus(msg || "실패 — '자세히 보기'에서 로그를 확인하세요", "err");
@@ -1029,8 +1036,10 @@
         finishRun(false, "클로드 코드 로그인이 필요합니다 — 터미널에서 claude 를 실행해 로그인한 뒤 다시 시도하세요");
       } else if (run.failReason) {
         finishRun(false, run.failReason);
-      } else if (ev.subtype === "success" && !ev.is_error) {
+      } else if (ev.subtype === "success" && !ev.is_error && run.sawDone) {
         finishRun(true, "");
+      } else if (ev.subtype === "success" && !ev.is_error) {
+        finishRun(false, "클로드가 작업을 끝까지 완료하지 않고 종료했습니다 — 다시 시도해 주세요 (자세히 보기에서 마지막 상태 확인)");
       } else {
         finishRun(false, resText.slice(0, 160) || "클로드 실행 실패 (" + (ev.subtype || "오류") + ")");
       }
@@ -1111,8 +1120,10 @@
     child.on("close", function (code) {
       if (!run.running) return;
       if (run.failReason) finishRun(false, run.failReason);
-      else if (code === 0 || run.sawDone) finishRun(true, "");
-      else finishRun(false, "클로드가 예기치 않게 종료됨 (코드 " + code + ")");
+      else if (run.sawDone) finishRun(true, "");
+      else finishRun(false, code === 0
+        ? "클로드가 작업을 끝까지 완료하지 않고 종료했습니다 — 다시 시도해 주세요"
+        : "클로드가 예기치 않게 종료됨 (코드 " + code + ")");
     });
   }
 
@@ -1805,7 +1816,7 @@
 
   // ============ 버튼 연결 (에디터) ============
 
-  $("btn-open-manual").addEventListener("click", function () {
+  function openSrtDialog() {
     var fs = cepFs();
     if (!fs) { setStatus("CEP 환경이 아닙니다", "err"); return; }
     var initDir = localStorage.getItem("lastDir") || "~/Desktop";
@@ -1813,7 +1824,9 @@
     if (!res || !res.data || !res.data.length) return;
     localStorage.setItem("lastDir", res.data[0].replace(/\/[^\/]+$/, ""));
     loadFile(res.data[0]);
-  });
+  }
+  $("btn-open-manual").addEventListener("click", openSrtDialog);
+  $("btn-open-file").addEventListener("click", openSrtDialog);
 
   $("btn-undo").addEventListener("click", doUndo);
   $("btn-redo").addEventListener("click", doRedo);
