@@ -265,9 +265,10 @@ function bangOpenCutResult(xmlPath, srtPath) {
             if (!beforeIds[String(proj.sequences[s2].sequenceID)]) { newSeq = proj.sequences[s2]; break; }
         }
         if (newSeq) {
+            // openSequence가 실제로 타임라인 탭을 연다 (activeSequence 지정만으로는 UI가 안 열림)
             var opened = false;
-            try { proj.activeSequence = newSeq; opened = true; } catch (eA) {}
-            if (!opened) { try { proj.openSequence(newSeq.sequenceID); opened = true; } catch (eB) {} }
+            try { opened = proj.openSequence(newSeq.sequenceID) === true; } catch (eA) {}
+            try { proj.activeSequence = newSeq; } catch (eB) {}
             return "OK:컷 시퀀스가 타임라인에 열렸습니다 — " + newSeq.name + srtNote;
         }
         return "OK:임포트 완료 — 시퀀스는 프로젝트 창 BangCut 폴더에서 열어주세요" + srtNote;
