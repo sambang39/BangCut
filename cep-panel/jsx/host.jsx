@@ -155,6 +155,48 @@ function bangGetCutSource(mode) {
     } catch (err) { return bangErr(String(err)); }
 }
 
+// 파일을 프로젝트 "BangCut" 빈으로 임포트 (빈 없으면 생성, 루트 낙하 시 moveBin 폴백)
+function bangImportToBin(filePath) {
+    try {
+        var proj = app.project;
+        if (!proj) return "ERR:열린 프로젝트가 없습니다";
+        var f = new File(filePath);
+        if (!f.exists) return "ERR:파일이 없습니다: " + filePath;
+        var root = proj.rootItem;
+
+        var bin = null;
+        for (var i = 0; i < root.children.numItems; i++) {
+            var c = root.children[i];
+            if (c && c.name === "BangCut" && c.type === ProjectItemType.BIN) { bin = c; break; }
+        }
+        if (!bin) bin = root.createBin("BangCut");
+        if (!bin) return "ERR:BangCut 빈 생성 실패";
+
+        var want = f.displayName;
+        for (var j = 0; j < bin.children.numItems; j++) {
+            if (bin.children[j] && bin.children[j].name === want) return "OK:이미 임포트됨";
+        }
+
+        proj.importFiles([filePath], true, bin, false);
+
+        // 빈 안에 들어갔는지 확인, 루트로 떨어졌으면 이동
+        var item = null;
+        for (var k = bin.children.numItems - 1; k >= 0; k--) {
+            if (bin.children[k] && bin.children[k].name === want) { item = bin.children[k]; break; }
+        }
+        if (!item) {
+            for (var m = root.children.numItems - 1; m >= 0; m--) {
+                var r = root.children[m];
+                if (r && r.name === want && r.type !== ProjectItemType.BIN) {
+                    try { r.moveBin(bin); item = r; } catch (eMv) {}
+                    break;
+                }
+            }
+        }
+        return item ? "OK:임포트 완료" : "ERR:임포트 확인 실패 — 프로젝트 창을 확인해 주세요";
+    } catch (err) { return "ERR:" + err; }
+}
+
 // 패널 연결 확인용
 function bangPing() {
     return "PONG " + app.version;

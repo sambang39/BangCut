@@ -59,8 +59,9 @@
   var seqInfo = { name: null, fps: 30000 / 1001, src: null };
   var settings = {
     preset: "medium", PAD_LEAD: 0.22, MIN_SILENCE: 0.30, PAD_TAIL: 0.10,
-    srcMode: "track", sttModel: "whisper", resolution: "FHD"
+    sttModel: "whisper", resolution: "FHD"
   };
+  var source = { path: null, meta: null }; // 컷편집 대상 (드롭/선택한 원테이크 파일)
   var detectedSrt = null;
 
   var cues = [];
@@ -96,7 +97,7 @@
     for (var i = 0; i < items.length; i++) {
       items[i].classList.toggle("on", items[i].dataset.screen === id);
     }
-    if (id === "screen-cutedit") { refreshSeqInfo(); detectCutSource(); }
+    if (id === "screen-cutedit") refreshSeqInfo();
     if (id === "screen-editor") activateEditor();
     if (id === "screen-settings") loadVitoUi();
   }
@@ -180,11 +181,12 @@
   function detectSrt() {
     detectedSrt = null;
     var candidates = [];
-    if (seqInfo.src) {
-      var dir = seqInfo.src.replace(/\/[^\/]+$/, "");
-      var base = seqInfo.src.split("/").pop().replace(/\.[^.]+$/, "");
+    var srcForSrt = source.path || seqInfo.src; // 드롭한 소스 우선, 없으면 시퀀스에서 감지
+    if (srcForSrt) {
+      var dir = srcForSrt.replace(/\/[^\/]+$/, "");
+      var base = srcForSrt.split("/").pop().replace(/\.[^.]+$/, "");
       candidates = [];
-      outDirsOf(seqInfo.src).forEach(function (od) {
+      outDirsOf(srcForSrt).forEach(function (od) {
         candidates.push(od + "/" + base + "_edit.srt");
         candidates.push(od + "/" + base + "_cut.srt");
       });
@@ -204,58 +206,149 @@
     }
   }
 
-  // ============ 컷편집: 소스 선택 (F) ============
+  // ============ 컷편집 대상: 드래그 앤 드롭 / 파일 선택 (F2) ============
 
-  function srcModeButtons() { return $("srcmode-row").children; }
+  var VIDEO_EXT = /\.(mp4|mov|m4v|mkv|mts|m2ts|mxf|avi)$/i;
 
-  function setSrcMode(m) {
-    settings.srcMode = m;
-    var btns = srcModeButtons();
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].classList.toggle("on", btns[i].dataset.mode === m);
-    }
-    detectCutSource();
+  function shellQuote(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
+
+  function extendedEnv() {
+    var env = {};
+    try {
+      var pe = nodeReq("process").env;
+      for (var k in pe) env[k] = pe[k];
+    } catch (e) {}
+    env.PATH = (env.PATH || "") + ":/usr/local/bin:/opt/homebrew/bin";
+    return env;
   }
 
-  function detectCutSource() {
-    var st = $("src-status");
-    run.sources = [];
-    var m = settings.srcMode;
-    if (!inCep()) { st.innerHTML = '<span class="err">CEP 환경이 아닙니다</span>'; return; }
-    st.textContent = "감지 중…";
+  function probeVideo(path, cb) {
+    var cp = nodeReq("child_process");
+    if (!cp) { cb(null); return; }
+    cp.exec("ffprobe -v quiet -print_format json -show_format -show_streams " + shellQuote(path),
+      { env: extendedEnv(), maxBuffer: 4 * 1024 * 1024 },
+      function (err, stdout) {
+        if (err) { cb(null); return; }
+        try {
+          var j = JSON.parse(String(stdout));
+          var v = null;
+          for (var i = 0; i < (j.streams || []).length; i++) {
+            if (j.streams[i].codec_type === "video") { v = j.streams[i]; break; }
+          }
+          cb({
+            width: v ? v.width : 0,
+            height: v ? v.height : 0,
+            duration: parseFloat(j.format && j.format.duration) || 0
+          });
+        } catch (e) { cb(null); }
+      });
+  }
 
-    evalScript("bangGetCutSource(" + JSON.stringify(m) + ")", function (res) {
-      var info = parseJson(res);
-      if (!info || !info.ok) {
-        st.innerHTML = '<span class="err">' + ((info && info.err) || "감지 실패: " + res) + "</span>";
-        return;
+  function resLabel(w, h) {
+    var mx = Math.max(w || 0, h || 0);
+    if (mx >= 3800) return "4K";
+    if (mx >= 2500) return "QHD";
+    if (mx >= 1900) return "FHD";
+    if (!mx) return "";
+    return w + "×" + h;
+  }
+
+  function durLabel(sec) {
+    if (!sec) return "";
+    var m = Math.floor(sec / 60);
+    var s = Math.round(sec % 60);
+    return m ? m + "분 " + s + "초" : s + "초";
+  }
+
+  function srcErr(msg) { $("src-err").textContent = msg || ""; }
+
+  function showDropzone() {
+    source.path = null;
+    source.meta = null;
+    $("dropzone").style.display = "block";
+    $("src-card").style.display = "none";
+    srcErr("");
+  }
+
+  function selectSource(path) {
+    srcErr("");
+    if (!path) return;
+    if (!VIDEO_EXT.test(path)) {
+      srcErr("영상 파일이 아닙니다: " + path.split("/").pop());
+      return;
+    }
+    if (!statOk(path)) {
+      srcErr("파일을 찾을 수 없습니다: " + path);
+      return;
+    }
+    source.path = path;
+    source.meta = null;
+    localStorage.setItem("lastVideoDir", path.replace(/\/[^\/]+$/, ""));
+
+    $("dropzone").style.display = "none";
+    $("src-card").style.display = "flex";
+    $("src-card-name").textContent = path.split("/").pop();
+    $("src-card-name").title = path;
+    $("src-card-meta").textContent = "정보 읽는 중…";
+
+    probeVideo(path, function (meta) {
+      if (source.path !== path) return;
+      source.meta = meta;
+      var parts = [];
+      if (meta) {
+        var r = resLabel(meta.width, meta.height);
+        if (r) parts.push(r);
+        var d = durLabel(meta.duration);
+        if (d) parts.push(d);
       }
-      if (info.mode === "inout") {
-        var inS = parseFloat(info.tin), outS = parseFloat(info.tout);
-        var okRange = isFinite(inS) && isFinite(outS) && outS > inS && inS >= 0;
-        run.sources = (okRange && seqInfo.src) ? [seqInfo.src] : [];
-        st.innerHTML = okRange
-          ? "In/Out 구간: <b>" + C.secondsToTimecode(inS, seqInfo.fps) + " ~ " +
-            C.secondsToTimecode(outS, seqInfo.fps) + "</b>"
-          : '<span class="err">In/Out 포인트가 없습니다. 시퀀스에 I/O를 찍어주세요</span>';
-        return;
-      }
-      var paths = (info.paths || []).map(function (p) { return p.replace(/^\/{2,}/, "/"); });
-      run.sources = paths;
-      var names = paths.map(function (p) { return p.split("/").pop(); });
-      var label = info.mode === "selection" ? "선택한 클립" : "V1 트랙";
-      st.innerHTML = label + " <b>" + paths.length + "개</b>: " +
-        names.slice(0, 3).join(", ") + (names.length > 3 ? " 외 " + (names.length - 3) + "개" : "");
+      $("src-card-meta").textContent = parts.length ? parts.join(" · ") : "정보를 읽지 못했습니다";
     });
+
+    // 프로젝트 창 BangCut 빈으로 임포트
+    evalScript("bangImportToBin(" + JSON.stringify(path) + ")", function (res) {
+      res = String(res || "");
+      if (res.indexOf("OK") === 0) {
+        cutStatus("프로젝트 창 BangCut 폴더에 임포트됨", "ok");
+      } else {
+        cutStatus(res.replace(/^ERR:?/, "임포트 실패: "), "err");
+      }
+    });
+
+    detectSrt();
   }
 
   (function () {
-    var btns = srcModeButtons();
-    for (var i = 0; i < btns.length; i++) {
-      (function (b) {
-        b.addEventListener("click", function () { setSrcMode(b.dataset.mode); });
-      })(btns[i]);
-    }
+    var dz = $("dropzone");
+    dz.addEventListener("click", function () {
+      var fs = cepFs();
+      if (!fs) { srcErr("CEP 환경이 아닙니다"); return; }
+      var initDir = localStorage.getItem("lastVideoDir") || "~/Desktop";
+      var res = fs.showOpenDialogEx(false, false, "컷편집할 영상 선택", initDir,
+        ["mp4", "mov", "m4v", "mkv", "mts", "m2ts", "mxf", "avi"]);
+      if (res && res.data && res.data.length) selectSource(res.data[0].replace(/^file:\/\//, ""));
+    });
+    dz.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.add("dragover");
+    });
+    dz.addEventListener("dragleave", function () { dz.classList.remove("dragover"); });
+    dz.addEventListener("drop", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.remove("dragover");
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (!files || !files.length) return;
+      if (files.length > 1) srcErr("한 번에 한 개의 원테이크 영상만 — 첫 번째 파일을 사용합니다");
+      var p = files[0].path;
+      if (!p) { srcErr("드롭에서 경로를 읽지 못했습니다 — 클릭해서 파일을 선택해 주세요"); return; }
+      selectSource(p);
+    });
+    // 패널 전역에서 드롭존 밖 드롭으로 페이지가 파일로 이동하는 것 방지
+    document.addEventListener("dragover", function (e) { e.preventDefault(); });
+    document.addEventListener("drop", function (e) { e.preventDefault(); });
+
+    $("btn-src-change").addEventListener("click", showDropzone);
   })();
 
   // ============ 컷편집: 프리셋/웨이브/설정 ============
@@ -586,7 +679,6 @@
       try {
         var s = JSON.parse(raw);
         // 비율 값은 복원하지 않음 — 항상 디폴트(자동 모드)로 시작 (사용자 확정)
-        if (typeof s.srcMode === "string") settings.srcMode = s.srcMode;
         if (typeof s.sttModel === "string") settings.sttModel = s.sttModel;
         if (typeof s.resolution === "string") settings.resolution = s.resolution;
         if (typeof s.fhd === "boolean") settings.resolution = s.fhd ? "FHD" : "4K";
@@ -784,10 +876,11 @@
       cutStatus("엔진(edit.sh)을 찾지 못했습니다: " + root, "err");
       return;
     }
-    if (!run.sources.length) {
-      cutStatus("컷편집 대상이 없습니다 — 위에서 대상을 선택/확인해 주세요", "err");
+    if (!source.path) {
+      cutStatus("컷편집할 영상을 먼저 선택해 주세요 (드래그 앤 드롭 또는 클릭)", "err");
       return;
     }
+    run.sources = [source.path];
     saveSettings(true);
     try { writeEngineOverride(root); } catch (e) {
       cutStatus("엔진 설정 전달 실패: " + e.message, "err");
@@ -1585,6 +1678,5 @@
   syncCutUi();
   setGapMode("auto");
   setModel(settings.sttModel || "whisper", true);
-  setSrcMode(settings.srcMode);
   showScreen("screen-cutedit");
 })();
