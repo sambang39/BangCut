@@ -34,6 +34,23 @@
   }
   .mono { font-family: "SF Mono", Menlo, monospace; }
 
+  /* 프리미어식 스크롤바 (전역 통일) */
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: #4d4d4d;
+    border-radius: 6px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    min-height: 40px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #616161;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
   button {
     background: var(--bg-elev2);
     color: var(--text);
@@ -391,15 +408,27 @@
   #btn-find-close-drawer { background: none; border: none; color: var(--text-dim); }
   #btn-find-close-drawer:hover { color: #fff; }
 
-  #statusbar {
-    padding: 6px 10px;
-    border-top: 1px solid var(--border);
-    font-size: 11px; color: var(--text-dim);
-    display: flex; justify-content: space-between; gap: 8px;
-    flex-shrink: 0; min-height: 27px;
+  #summary { margin-left: auto; font-size: 10.5px; color: var(--text-dim); white-space: nowrap; }
+  #toast {
+    position: absolute;
+    left: 50%; bottom: 14px;
+    transform: translateX(-50%);
+    background: #333;
+    border: 1px solid #4a4a4a;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 11px;
+    color: var(--text);
+    max-width: 86%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s;
+    z-index: 40;
   }
-  #status.ok { color: var(--ok); }
-  #status.err { color: var(--warn); }
+  #toast.show { opacity: 1; }
+  #toast.ok { border-color: rgba(108,191,108,0.5); color: var(--ok); }
+  #toast.err { border-color: rgba(224,108,92,0.6); color: var(--warn); }
 
   /* ---------- 설정 ---------- */
   .set-card {
@@ -636,20 +665,15 @@
             <svg viewBox="0 0 16 16"><path d="M11.2 10a5 5 0 1 0-1.2 1.2l3.2 3.2 1.2-1.2-3.2-3.2zM7 10.5A3.5 3.5 0 1 1 7 3.5a3.5 3.5 0 0 1 0 7z"/></svg>검색
           </button>
           <button id="btn-save" title="수정한 자막을 SRT 파일로 저장합니다 — 원본은 보존, <이름>_edit.srt 생성 (⌘S)">SRT 저장 <kbd>⌘S</kbd></button>
+          <span id="summary"></span>
         </div>
         <div id="cue-list">
           <div id="empty">
-            <p id="srt-hint">컷편집 결과 자막을 확인 중…</p><br>
-            <kbd>W</kbd><kbd>S</kbd> 자막 이동 &nbsp; <kbd>A</kbd><kbd>D</kbd> 단어 이동 (플레이헤드 연동)<br>
-            <kbd>⏎</kbd> 선택 단어 앞에서 나누기 &nbsp; <kbd>⌫</kbd> 위와 병합 &nbsp; <kbd>⌦</kbd> 아래와 병합<br>
-            클릭 = 단어 선택 · 한 번 더 = 단어 수정 · 더블클릭 = 문장 수정
+            <p id="srt-hint">컷편집 결과 자막을 확인 중…</p>
             <div class="actions"><button id="btn-open-manual">SRT 직접 열기</button></div>
           </div>
         </div>
-        <div id="statusbar">
-          <span id="status">준비</span>
-          <span id="summary"></span>
-        </div>
+        <div id="toast"></div>
       </div>
 
       <aside id="find-drawer">

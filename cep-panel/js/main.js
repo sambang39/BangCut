@@ -81,7 +81,6 @@
   var $ = function (id) { return document.getElementById(id); };
   var $list = $("cue-list");
   var $empty = $("empty");
-  var $status = $("status");
   var $summary = $("summary");
 
   // ============ 화면 전환 ============
@@ -127,9 +126,15 @@
 
   // ============ 상태바 ============
 
+  var toastTimer = null;
   function setStatus(msg, kind) {
-    $status.textContent = msg;
-    $status.className = kind || "";
+    var t = $("toast");
+    if (!msg) { t.classList.remove("show"); return; }
+    t.textContent = msg;
+    t.className = (kind || "") + " show";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); },
+      kind === "err" ? 5000 : 2500);
   }
 
   function updateSummary() {
@@ -1620,7 +1625,6 @@
     $("editor-file").title = path;
     showScreen("screen-editor");
     render(0, 0);
-    setStatus("불러오기 완료 — W/S 자막, A/D 단어 이동", "ok");
   }
 
   function editPath() {
