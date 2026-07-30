@@ -275,6 +275,15 @@ function bangOpenCutResult(xmlPath, srtPath) {
     } catch (err) { return "ERR:" + err; }
 }
 
+// 현재 플레이헤드 위치(초) — 역방향 싱크용
+function bangGetPlayerPosition() {
+    try {
+        var seq = app.project.activeSequence;
+        if (!seq) return "ERR";
+        return String(seq.getPlayerPosition().seconds);
+    } catch (e) { return "ERR"; }
+}
+
 // 패널 연결 확인용
 function bangPing() {
     return "PONG " + app.version;

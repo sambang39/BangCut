@@ -1463,6 +1463,8 @@
 
   var syncTimer = null;
   var syncPending = null;
+  var followLast = -1;      // 마지막으로 관측/전송한 플레이헤드(초)
+  var followMuteUntil = 0;  // 패널發 이동 직후 역싱크 억제 시한
 
   function syncPlayhead(sec) {
     syncPending = sec;
@@ -1472,9 +1474,51 @@
       if (syncPending == null) return;
       var s = syncPending;
       syncPending = null;
+      followLast = s;
+      followMuteUntil = Date.now() + 900;
       evalScript("bangSetPlayerPosition(" + (s + 0.0001) + ")");
     }, 120);
   }
+
+  // 역방향 싱크: 타임라인 플레이헤드를 따라 자막·단어 포인트 이동
+  function cueAt(t) {
+    for (var i = 0; i < cues.length; i++) {
+      if (t < cues[i].start) return Math.max(0, i - 1) === i ? i : (i > 0 && t <= cues[i - 1].end + 0.001 ? i - 1 : i);
+      if (t <= cues[i].end) return i;
+    }
+    return cues.length - 1;
+  }
+
+  function wordAt(ci, t) {
+    var c = cues[ci];
+    var toks = tokensOf(ci);
+    if (!toks.length) return 0;
+    var dur = Math.max(0.001, c.end - c.start);
+    var charPos = Math.max(0, Math.min(1, (t - c.start) / dur)) * c.text.length;
+    for (var w = 0; w < toks.length; w++) {
+      if (charPos < toks[w].e) return w;
+    }
+    return toks.length - 1;
+  }
+
+  setInterval(function () {
+    if (current !== "screen-editor" || !cues.length || mode !== "nav" || run.running) return;
+    var ae = document.activeElement;
+    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+    if (Date.now() < followMuteUntil) return;
+    evalScript("bangGetPlayerPosition()", function (res) {
+      var t = parseFloat(res);
+      if (!isFinite(t)) return;
+      if (Date.now() < followMuteUntil) return;
+      if (Math.abs(t - followLast) < 0.05) return;
+      followLast = t;
+      var ci = cueAt(t);
+      if (ci < 0) return;
+      var wi = wordAt(ci, t);
+      if (ci === pointer.cue && wi === pointer.word) return;
+      setPointer(ci, wi, { scroll: true, noSync: true });
+    });
+  }, 400);
 
   // ============ 이력 ============
 
