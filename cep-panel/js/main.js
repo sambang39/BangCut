@@ -839,7 +839,14 @@
     }
   })();
 
-  // ============ 컷편집: 엔진 실행 (G) ============
+  // ============ 컷편집: 클로드 코드 실행 브리지 (H4) + 쉬운 터미널 프로그레스 (H5) ============
+
+  var STEPS = ["준비", "영상 분석", "전사", "컷 계획", "렌더", "자막 정리", "완료"];
+  var STEP_PCT = [4, 14, 34, 54, 74, 90, 100];
+
+  function claudeBin() {
+    return prereq.claudePath || localStorage.getItem("bangcutClaudePath");
+  }
 
   function repoRoot() {
     var ext = extensionDir();
@@ -868,19 +875,166 @@
     if (!writeEngineConfig(cfg)) throw new Error("config.json 쓰기 실패");
   }
 
+  // ---------- 프로그레스 ----------
+
   function logLine(s) {
+    s = String(s || "").trim();
+    if (!s) return;
     run.logLines.push(s);
-    if (run.logLines.length > 400) run.logLines = run.logLines.slice(-300);
+    if (run.logLines.length > 500) run.logLines = run.logLines.slice(-400);
     var el = $("run-log");
     el.textContent = run.logLines.join("\n");
     el.scrollTop = el.scrollHeight;
+  }
+
+  function renderSteps() {
+    var box = $("prog-steps");
+    box.innerHTML = "";
+    STEPS.forEach(function (name, i) {
+      var d = document.createElement("div");
+      d.className = "pstep" + (i < run.step ? " done" : i === run.step ? " cur" : "");
+      d.textContent = (i < run.step ? "✓ " : i === run.step ? "▸ " : "· ") + name;
+      box.appendChild(d);
+    });
+  }
+
+  function setPct(p) {
+    p = Math.max(run.pct, Math.min(100, Math.round(p)));
+    run.pct = p;
+    $("prog-pct").textContent = p + "%";
+    $("prog-fill").style.width = p + "%";
+  }
+
+  function setStep(i) {
+    if (i <= run.step) return; // 뒤로는 안 감 (마커 중복/순서 흔들림 방어)
+    run.step = i;
+    var last = i === STEPS.length - 1;
+    $("prog-title").textContent = last ? "완료!" : STEPS[i] + " 중…";
+    setPct(i === 0 ? 3 : STEP_PCT[i - 1]);
+    renderSteps();
+  }
+
+  function startCreep() {
+    clearInterval(run.creepTimer);
+    run.creepTimer = setInterval(function () {
+      if (run.step < 0 || run.step >= STEPS.length - 1) return;
+      var cap = STEP_PCT[run.step] - 2;
+      if (run.pct < cap) setPct(run.pct + 1);
+    }, 2500);
   }
 
   function setRunningUi(on) {
     $("btn-run-cut").disabled = on || !(source.path && source.imported);
     $("btn-run-cut").textContent = on ? "실행 중…" : "컷편집 시작";
     $("btn-stop-cut").style.display = on ? "inline-block" : "none";
-    $("run-log").classList.toggle("open", on || run.logLines.length > 0);
+    if (on) $("prog-wrap").style.display = "block";
+  }
+
+  $("btn-log-toggle").addEventListener("click", function () {
+    var el = $("run-log");
+    var open = !el.classList.contains("open");
+    el.classList.toggle("open", open);
+    $("btn-log-toggle").textContent = open ? "간단히 보기" : "자세히 보기";
+  });
+
+  // ---------- 클로드 요청 프롬프트 ----------
+
+  function buildPrompt() {
+    var L = [];
+    L.push('영상 자동 컷편집을 수행하라. 대상 원본: "' + source.path + '"');
+    if (gapMode === "manual") {
+      L.push("- 무음 구간 설정: 사용자가 직접 지정 — config.json에 MIN_SILENCE/PAD_LEAD/PAD_TAIL로 반영돼 있음. --preset 옵션은 쓰지 말 것");
+    } else {
+      L.push("- 무음 구간 설정: 자동 — engine/analyze_video.py로 영상을 측정해 보수/표준/공격 중 알맞은 프리셋을 스스로 판단해 --preset으로 지정");
+    }
+    if (settings.sttModel === "vito") {
+      L.push("- 전사 모델: VITO — engine/stt_vito.py로 먼저 전사해 _words.json을 만든 뒤 edit.sh 실행 (키는 config.json)");
+    } else {
+      L.push("- 전사 모델: Whisper — edit.sh가 자체 처리");
+    }
+    L.push(settings.resolution === "FHD"
+      ? "- 시퀀스 해상도: FHD — edit.sh에 --fhd 플래그 추가"
+      : "- 시퀀스 해상도: 4K(원본) — --fhd 플래그를 쓰지 말 것");
+    L.push("");
+    L.push("실행 방식: cut-editing 스킬 플로우를 따르라. edit.sh는 백그라운드로 실행하고 출력을 주기적으로 확인하면서 진행 단계를 보고하라.");
+    L.push("진행 보고 규칙(패널 프로그레스용 — 반드시 지켜라): 아래 단계가 시작될 때마다 해당 마커를 텍스트로 정확히 한 줄 출력:");
+    L.push("###STEP:2:영상 분석 / ###STEP:3:전사 / ###STEP:4:컷 계획 / ###STEP:5:렌더 / ###STEP:6:자막 정리");
+    L.push("(엔진 출력에서 받아쓰기·무음/컷·XML/렌더·자막 단계가 관찰될 때 해당 마커를 출력하면 된다)");
+    L.push("결과 검수(과도한 컷·어미 잘림 확인) 후 성공이면 마지막 줄에 ###DONE, 실패면 ###FAIL:<한 줄 사유> 를 출력하라.");
+    return L.join("\n");
+  }
+
+  // ---------- 실행 ----------
+
+  function finishRun(ok, msg) {
+    if (!run.running) return;
+    run.running = false;
+    clearInterval(run.creepTimer);
+    try { if (run.proc) killTree(run.proc); } catch (e) {}
+    run.proc = null;
+    setRunningUi(false);
+    if (ok) {
+      run.step = STEPS.length; // 전부 done 표시
+      renderSteps();
+      $("prog-title").textContent = "완료!";
+      setPct(100);
+      cutStatus("컷편집 완료 — 자막 편집 탭에서 이어서 작업하세요", "ok");
+      refreshSeqInfo();
+    } else {
+      $("prog-title").textContent = "중단됨";
+      cutStatus(msg || "실패 — '자세히 보기'에서 로그를 확인하세요", "err");
+      $("run-log").classList.add("open");
+      $("btn-log-toggle").textContent = "간단히 보기";
+    }
+    if (msg) logLine((ok ? "== 완료: " : "== 실패: ") + msg);
+  }
+
+  function killTree(child) {
+    try {
+      var proc = nodeReq("process");
+      proc.kill(-child.pid, "SIGTERM"); // detached 프로세스 그룹 전체 종료 (엔진 포함)
+    } catch (e) {
+      try { child.kill("SIGTERM"); } catch (e2) {}
+    }
+  }
+
+  function scanText(text) {
+    var m;
+    var re = /###STEP:(\d+):/g;
+    while ((m = re.exec(text))) {
+      var n = parseInt(m[1], 10);
+      if (n >= 1 && n <= 6) setStep(n - 1); // 마커 번호 = STEPS 인덱스 + 1
+    }
+    if (text.indexOf("###DONE") !== -1) run.sawDone = true;
+    var f = text.match(/###FAIL:([^\n]*)/);
+    if (f) run.failReason = f[1].trim() || "원인 미상";
+  }
+
+  function handleEvent(ev) {
+    if (!ev || !ev.type) return;
+    if (ev.type === "assistant" && ev.message && ev.message.content) {
+      for (var i = 0; i < ev.message.content.length; i++) {
+        var c = ev.message.content[i];
+        if (c.type === "text" && c.text) {
+          scanText(c.text);
+          logLine(c.text.replace(/###(STEP:[^\n]*|DONE|FAIL:[^\n]*)/g, "").trim());
+        } else if (c.type === "tool_use") {
+          var cmd = c.input && (c.input.command || c.input.file_path || "");
+          logLine("▸ " + c.name + (cmd ? ": " + String(cmd).slice(0, 90) : ""));
+        }
+      }
+    } else if (ev.type === "result") {
+      var resText = String(ev.result || "");
+      if (ev.is_error && /not logged in|log ?in/i.test(resText)) {
+        finishRun(false, "클로드 코드 로그인이 필요합니다 — 터미널에서 claude 를 실행해 로그인한 뒤 다시 시도하세요");
+      } else if (run.failReason) {
+        finishRun(false, run.failReason);
+      } else if (ev.subtype === "success" && !ev.is_error) {
+        finishRun(true, "");
+      } else {
+        finishRun(false, resText.slice(0, 160) || "클로드 실행 실패 (" + (ev.subtype || "오류") + ")");
+      }
+    }
   }
 
   function runCut() {
@@ -895,17 +1049,12 @@
   function runCutReady() {
     if (run.running) return;
     var cp = nodeReq("child_process");
-    if (!cp) { cutStatus("Node 실행 환경을 찾지 못했습니다 (패널 재시작 필요)", "err"); return; }
+    var bin = claudeBin();
     var root = repoRoot();
-    if (!root || !statOk(root + "/edit.sh")) {
-      cutStatus("엔진(edit.sh)을 찾지 못했습니다: " + root, "err");
-      return;
-    }
-    if (!source.path) {
-      cutStatus("컷편집할 영상을 먼저 선택해 주세요 (드래그 앤 드롭 또는 클릭)", "err");
-      return;
-    }
-    run.sources = [source.path];
+    if (!cp || !bin) { cutStatus("클로드 코드 실행 환경을 찾지 못했습니다", "err"); return; }
+    if (!root || !statOk(root + "/edit.sh")) { cutStatus("엔진(edit.sh)을 찾지 못했습니다: " + root, "err"); return; }
+    if (!source.path) { cutStatus("컷편집할 영상을 먼저 선택해 주세요 (드래그 앤 드롭 또는 클릭)", "err"); return; }
+
     saveSettings(true);
     try { writeEngineOverride(root); } catch (e) {
       cutStatus("엔진 설정 전달 실패: " + e.message, "err");
@@ -913,71 +1062,63 @@
     }
 
     run.running = true;
-    run.queue = run.sources.slice();
+    run.step = -1;
+    run.pct = 0;
     run.logLines = [];
+    run.buf = "";
+    run.sawDone = false;
+    run.failReason = null;
+    $("run-log").textContent = "";
+    $("run-log").classList.remove("open");
+    $("btn-log-toggle").textContent = "자세히 보기";
     setRunningUi(true);
-    cutStatus("컷편집 실행 중 — " + run.queue.length + "개 소스. 패널을 닫지 마세요", "");
-    logLine("== BangCut 엔진 실행 (" + run.queue.length + "개) ==");
-    runNext(cp, root);
-  }
+    cutStatus("", "");
+    setStep(0);
+    renderSteps();
+    startCreep();
+    logLine("== BangCut × Claude Code 실행 ==");
+    logLine("대상: " + source.path.split("/").pop());
 
-  function runNext(cp, root) {
-    if (!run.queue.length) {
-      run.running = false;
-      run.proc = null;
-      setRunningUi(false);
-      cutStatus("컷편집 완료 — 자막이 연결되었는지 홈에서 확인하세요", "ok");
-      logLine("== 전체 완료 ==");
-      refreshSeqInfo();
+    var args = [
+      "-p", buildPrompt(),
+      "--output-format", "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions"
+    ];
+    var child;
+    try {
+      child = cp.spawn(bin, args, { cwd: root, env: extendedEnv(), detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    } catch (e) {
+      finishRun(false, "클로드 실행 오류: " + e.message);
       return;
     }
-    var src = run.queue.shift();
-    logLine("\n▶ " + src.split("/").pop());
-    var args = [root + "/edit.sh", src];
-    if (settings.resolution === "FHD") args.push("--fhd");
-
-    var env = {};
-    try {
-      var pe = nodeReq("process").env;
-      for (var k in pe) env[k] = pe[k];
-    } catch (e) {}
-    env.PATH = (env.PATH || "") + ":/usr/local/bin:/opt/homebrew/bin";
-
-    var child = cp.spawn("/bin/bash", args, { cwd: root, env: env });
     run.proc = child;
 
-    child.stdout.on("data", function (d) { String(d).split("\n").forEach(function (l) { if (l.trim()) logLine(l); }); });
-    child.stderr.on("data", function (d) { String(d).split("\n").forEach(function (l) { if (l.trim()) logLine("! " + l); }); });
-    child.on("error", function (e) {
-      logLine("!! 실행 오류: " + e.message);
-      run.running = false;
-      setRunningUi(false);
-      cutStatus("실행 오류: " + e.message, "err");
-    });
-    child.on("close", function (code) {
-      if (!run.running) return; // 중단됨
-      if (code === 0) {
-        logLine("✓ 완료: " + src.split("/").pop());
-        runNext(cp, root);
-      } else {
-        run.running = false;
-        run.proc = null;
-        setRunningUi(false);
-        cutStatus("엔진 종료 코드 " + code + " — 로그를 확인하세요", "err");
-        logLine("!! 종료 코드 " + code);
+    child.stdout.on("data", function (d) {
+      run.buf += String(d);
+      var lines = run.buf.split("\n");
+      run.buf = lines.pop();
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        try { handleEvent(JSON.parse(line)); } catch (e) {}
       }
+    });
+    child.stderr.on("data", function (d) {
+      String(d).split("\n").forEach(function (l) { if (l.trim()) logLine("! " + l.trim()); });
+    });
+    child.on("error", function (e) { finishRun(false, "클로드 실행 오류: " + e.message); });
+    child.on("close", function (code) {
+      if (!run.running) return;
+      if (run.failReason) finishRun(false, run.failReason);
+      else if (code === 0 || run.sawDone) finishRun(true, "");
+      else finishRun(false, "클로드가 예기치 않게 종료됨 (코드 " + code + ")");
     });
   }
 
   function stopCut() {
     if (!run.running) return;
-    run.running = false;
-    run.queue = [];
-    try { if (run.proc) run.proc.kill("SIGTERM"); } catch (e) {}
-    run.proc = null;
-    setRunningUi(false);
-    cutStatus("중단됨", "err");
-    logLine("== 사용자 중단 ==");
+    finishRun(false, "사용자 중단");
   }
 
   $("btn-run-cut").addEventListener("click", runCut);
