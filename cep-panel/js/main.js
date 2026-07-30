@@ -61,7 +61,7 @@
     preset: "medium", PAD_LEAD: 0.22, MIN_SILENCE: 0.30, PAD_TAIL: 0.10,
     sttModel: "whisper", resolution: "FHD"
   };
-  var source = { path: null, meta: null }; // 컷편집 대상 (드롭/선택한 원테이크 파일)
+  var source = { path: null, meta: null, imported: false }; // 컷편집 대상 (드롭/선택한 원테이크 파일)
   var detectedSrt = null;
 
   var cues = [];
@@ -154,11 +154,6 @@
         seqInfo.name = info.name || null;
         seqInfo.fps = parseFloat(info.fps) || seqInfo.fps;
         seqInfo.src = (info.src || "").replace(/^\/{2,}/, "/") || null;
-        $("seq-name").textContent = "시퀀스: " + seqInfo.name;
-        $("src-name").textContent = seqInfo.src ? seqInfo.src.split("/").pop() : "시퀀스에서 못 찾음";
-      } else {
-        $("seq-name").textContent = (info && info.err) ? info.err : "활성 시퀀스 없음";
-        $("src-name").textContent = "—";
       }
       detectSrt();
       if (cb) cb();
@@ -262,12 +257,20 @@
 
   function srcErr(msg) { $("src-err").textContent = msg || ""; }
 
+  // 임포트 완료 전에는 컷편집 시작 비활성 (사용자 확정)
+  function updateRunButton() {
+    if (!run.running) $("btn-run-cut").disabled = !(source.path && source.imported);
+  }
+
   function showDropzone() {
     source.path = null;
     source.meta = null;
+    source.imported = false;
     $("dropzone").style.display = "block";
     $("src-card").style.display = "none";
     srcErr("");
+    cutStatus("", "");
+    updateRunButton();
   }
 
   function selectSource(path) {
@@ -283,6 +286,8 @@
     }
     source.path = path;
     source.meta = null;
+    source.imported = false;
+    updateRunButton();
     localStorage.setItem("lastVideoDir", path.replace(/\/[^\/]+$/, ""));
 
     $("dropzone").style.display = "none";
@@ -307,11 +312,15 @@
     // 프로젝트 창 BangCut 빈으로 임포트
     evalScript("bangImportToBin(" + JSON.stringify(path) + ")", function (res) {
       res = String(res || "");
+      if (source.path !== path) return;
       if (res.indexOf("OK") === 0) {
+        source.imported = true;
         cutStatus("프로젝트 창 BangCut 폴더에 임포트됨", "ok");
       } else {
+        source.imported = false;
         cutStatus(res.replace(/^ERR:?/, "임포트 실패: "), "err");
       }
+      updateRunButton();
     });
 
     detectSrt();
@@ -348,7 +357,18 @@
     document.addEventListener("dragover", function (e) { e.preventDefault(); });
     document.addEventListener("drop", function (e) { e.preventDefault(); });
 
-    $("btn-src-change").addEventListener("click", showDropzone);
+    $("btn-src-change").addEventListener("click", function () {
+      var name = source.path ? source.path.split("/").pop() : "";
+      $("change-msg").textContent = "기존 '" + name + "' 영상본이 아닌 새로운 영상본으로 교체하시겠어요?";
+      $("change-overlay").classList.add("open");
+    });
+    $("btn-change-yes").addEventListener("click", function () {
+      $("change-overlay").classList.remove("open");
+      showDropzone();
+    });
+    $("btn-change-no").addEventListener("click", function () {
+      $("change-overlay").classList.remove("open");
+    });
   })();
 
   // ============ 컷편집: 프리셋/웨이브/설정 ============
@@ -852,7 +872,7 @@
   }
 
   function setRunningUi(on) {
-    $("btn-run-cut").disabled = on;
+    $("btn-run-cut").disabled = on || !(source.path && source.imported);
     $("btn-run-cut").textContent = on ? "실행 중…" : "컷편집 시작";
     $("btn-stop-cut").style.display = on ? "inline-block" : "none";
     $("run-log").classList.toggle("open", on || run.logLines.length > 0);
@@ -1678,5 +1698,6 @@
   syncCutUi();
   setGapMode("auto");
   setModel(settings.sttModel || "whisper", true);
+  updateRunButton();
   showScreen("screen-cutedit");
 })();

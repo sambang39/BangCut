@@ -523,8 +523,7 @@
   <!-- 컷편집 -->
   <section id="screen-cutedit" class="screen active">
     <div class="screen-pad">
-      <p class="screen-title">자동 컷편집</p>
-      <p class="screen-sub"><span id="seq-name">시퀀스 확인 중…</span><span id="src-name" style="display:none;"></span></p>
+      <p class="screen-title" style="margin-bottom:12px;">자동 컷편집</p>
 
       <p class="field-label">컷편집 대상</p>
       <div id="dropzone">
@@ -758,6 +757,18 @@
       <div class="modal-actions">
         <button class="primary grow" id="btn-ob-recheck">다시 확인</button>
         <button id="btn-ob-close">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 영상 교체 확인 -->
+  <div id="change-overlay" class="overlay">
+    <div class="modal-card">
+      <p class="ob-title">영상본을 교체할까요?</p>
+      <p class="ob-sub" id="change-msg">기존 영상본이 아닌 새로운 영상본으로 교체하시겠어요?</p>
+      <div class="modal-actions">
+        <button class="primary grow" id="btn-change-yes">예, 교체할게요</button>
+        <button class="grow" id="btn-change-no">아니오</button>
       </div>
     </div>
   </div>
