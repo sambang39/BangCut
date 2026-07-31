@@ -4,6 +4,7 @@
   "use strict";
 
   var C = window.BangCore;
+  var PANEL_VERSION = "0.2.0";
 
   // ============ CEP 브리지 ============
 
@@ -100,7 +101,7 @@
     }
     if (id === "screen-cutedit") refreshSeqInfo();
     if (id === "screen-editor") activateEditor();
-    if (id === "screen-settings") loadVitoUi();
+    if (id === "screen-settings") { loadVitoUi(); loadClaudeUi(); }
   }
 
   (function () {
@@ -656,6 +657,7 @@
           card.classList.toggle("open", opening);
           if (opening && card.id === "card-env") loadEnvInfo();
           if (opening && card.id === "card-vito") loadVitoUi();
+          if (opening && card.id === "card-claude") loadClaudeUi();
         });
       })(cards[i]);
     }
@@ -705,6 +707,33 @@
   }
 
   $("btn-save-vito").addEventListener("click", saveVitoKeys);
+
+  function loadClaudeUi() {
+    var email = claudeAccount();
+    var key = claudeApiKey();
+    var badge = $("claude-head-badge");
+    badge.textContent = email ? "구독 로그인됨" : (key ? "API 키 사용 중" : "미연결");
+    badge.className = "badge" + ((email || key) ? " ok" : "");
+    $("claude-conn-desc").innerHTML =
+      (email
+        ? "구독 계정: <b>" + email + "</b> — 정액 요금으로 실행됩니다."
+        : (key ? "API 키(" + maskKey(key) + ")로 실행됩니다 — 사용량만큼 과금."
+               : "클로드와 연결되어 있지 않습니다.")) +
+      "<br><span style='color:var(--text-faint)'>로그인이 있으면 로그인을 사용하고, API 키는 로그인이 없을 때 사용됩니다.</span>";
+    $("set-claude-key").value = "";
+    $("set-claude-key").placeholder = key ? "저장됨 (" + maskKey(key) + ") — 변경할 때만 입력" : "sk-ant-…";
+    $("claude-key-status").textContent = "";
+  }
+
+  $("btn-save-claude-key").addEventListener("click", function () {
+    var k = $("set-claude-key").value.trim();
+    var st = $("claude-key-status");
+    if (!k) { st.textContent = "키를 입력해 주세요"; st.className = "err"; return; }
+    saveClaudeKey(k);
+    loadClaudeUi();
+    st.textContent = "저장됨 (" + maskKey(k) + ")";
+    st.className = "ok";
+  });
 
   function loadEnvInfo() {
     $("env-info").innerHTML = "확인 중…";
@@ -768,9 +797,56 @@
     el.className = kind || "";
   }
 
+  // ============ Claude 연결 (M) ============
+
+  function homeDir() {
+    try { return nodeReq("process").env.HOME || ""; } catch (e) { return ""; }
+  }
+
+  function claudeAccount() {
+    var fsN = nodeReq("fs");
+    if (!fsN) return null;
+    try {
+      var j = JSON.parse(fsN.readFileSync(homeDir() + "/.claude.json", "utf8"));
+      return (j.oauthAccount && j.oauthAccount.emailAddress) || null;
+    } catch (e) { return null; }
+  }
+
+  function claudeApiKey() {
+    return localStorage.getItem("bangcutClaudeKey") || "";
+  }
+
+  function saveClaudeKey(k) {
+    localStorage.setItem("bangcutClaudeKey", k);
+    var cfg = readEngineConfig();
+    cfg.ANTHROPIC_API_KEY = k;
+    writeEngineConfig(cfg); // 저장소 있으면 미러 (없으면 조용히 실패 — localStorage가 원본)
+  }
+
+  // 규칙: 로그인이 있으면 로그인(정액) 사용, API 키는 로그인이 없을 때만 주입
+  function buildClaudeEnv() {
+    var env = extendedEnv();
+    var key = claudeApiKey();
+    if (!claudeAccount() && key) env.ANTHROPIC_API_KEY = key;
+    return env;
+  }
+
+  function maskKey(k) {
+    if (!k) return "";
+    return k.length <= 10 ? "•••" : k.slice(0, 7) + "…" + k.slice(-4);
+  }
+
   // ============ 전제조건 감지 + 온보딩 (H2) ============
 
-  var prereq = { claude: false, claudePath: null, repo: false, venv: false, checked: false };
+  var prereq = { claude: false, claudePath: null, repo: false, venv: false,
+                 ffmpeg: false, connected: false, checked: false };
+
+  function findBin(fsN, cands) {
+    for (var i = 0; i < cands.length; i++) {
+      try { if (fsN.existsSync(cands[i])) return cands[i]; } catch (e) {}
+    }
+    return null;
+  }
 
   function checkPrereq(cb) {
     var fsN = nodeReq("fs");
@@ -778,59 +854,57 @@
     var root = repoRoot();
     prereq.repo = !!(root && fsN && fsN.existsSync(root + "/edit.sh"));
     prereq.venv = !!(root && fsN && fsN.existsSync(root + "/.venv/bin/python"));
-    prereq.claude = false;
-    prereq.claudePath = null;
+    prereq.connected = !!(claudeAccount() || claudeApiKey());
+    var home = homeDir();
+    prereq.claudePath = fsN ? findBin(fsN, [
+      home + "/.local/bin/claude", "/usr/local/bin/claude", "/opt/homebrew/bin/claude"
+    ]) : null;
+    prereq.claude = !!prereq.claudePath;
+    prereq.ffmpeg = !!(fsN && findBin(fsN, [
+      "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"
+    ]));
 
-    var home = "";
-    try { home = nodeReq("process").env.HOME || ""; } catch (e) {}
-    var candidates = [
-      home + "/.local/bin/claude",
-      "/usr/local/bin/claude",
-      "/opt/homebrew/bin/claude"
-    ];
-    if (fsN) {
-      for (var i = 0; i < candidates.length; i++) {
-        try {
-          if (fsN.existsSync(candidates[i])) { prereq.claude = true; prereq.claudePath = candidates[i]; break; }
-        } catch (e2) {}
-      }
-    }
     function done() {
       prereq.checked = true;
       if (prereq.claudePath) localStorage.setItem("bangcutClaudePath", prereq.claudePath);
       cb(prereq);
     }
-    if (prereq.claude || !cp) { done(); return; }
-    // 후보 경로에 없으면 셸 PATH에서 탐색
-    var env = {};
-    try {
-      var pe = nodeReq("process").env;
-      for (var k in pe) env[k] = pe[k];
-    } catch (e3) {}
-    env.PATH = (env.PATH || "") + ":/usr/local/bin:/opt/homebrew/bin:" + home + "/.local/bin";
-    cp.exec("command -v claude", { env: env }, function (err, stdout) {
-      var p = String(stdout || "").trim();
-      if (!err && p) { prereq.claude = true; prereq.claudePath = p; }
-      done();
-    });
+    if ((prereq.claude && prereq.ffmpeg) || !cp) { done(); return; }
+    cp.exec("command -v claude || true; command -v ffmpeg || true", { env: extendedEnv() },
+      function (err, stdout) {
+        String(stdout || "").split("\n").forEach(function (l) {
+          l = l.trim();
+          if (/\/claude$/.test(l)) { prereq.claude = true; prereq.claudePath = l; }
+          if (/\/ffmpeg$/.test(l)) prereq.ffmpeg = true;
+        });
+        done();
+      });
   }
 
   function renderObStatus() {
+    var email = claudeAccount();
+    var key = claudeApiKey();
+    $("ob-conn-status").textContent = "현재: " + (email
+      ? "구독 로그인됨 — " + email
+      : (key ? "API 키 저장됨 (" + maskKey(key) + ")" : "미연결"));
     function line(ok, label) {
-      return '<span class="' + (ok ? "ok" : "bad") + '">' + (ok ? "✓" : "✗") + " " + label +
-        (ok ? "" : " — 위 단계를 진행해 주세요") + "</span><br>";
+      return '<span class="' + (ok ? "ok" : "bad") + '">' + (ok ? "✓ " : "✗ ") + label + "</span><br>";
     }
     $("ob-status").innerHTML =
-      line(prereq.claude, "클로드 코드 " + (prereq.claude ? "설치됨" : "미설치")) +
-      line(prereq.repo && prereq.venv, "BangCut 프로젝트 " + (prereq.repo ? (prereq.venv ? "설치 완료" : "클론됨 (설치 미완료)") : "미설치"));
-    $("ob-num1").classList.toggle("done", prereq.claude);
-    $("ob-num1").textContent = prereq.claude ? "✓" : "1";
-    var step2ok = prereq.repo && prereq.venv;
+      line(prereq.connected, "Claude 연결") +
+      line(prereq.claude, "클로드 코드 CLI") +
+      line(prereq.ffmpeg, "ffmpeg") +
+      line(prereq.repo && prereq.venv, "엔진 + 파이썬 환경");
+    $("ob-num1").classList.toggle("done", prereq.connected);
+    $("ob-num1").textContent = prereq.connected ? "✓" : "1";
+    var step2ok = prereq.claude && prereq.ffmpeg && prereq.repo && prereq.venv;
     $("ob-num2").classList.toggle("done", step2ok);
     $("ob-num2").textContent = step2ok ? "✓" : "2";
   }
 
-  function prereqOk() { return prereq.claude && prereq.repo && prereq.venv; }
+  function prereqOk() {
+    return prereq.claude && prereq.repo && prereq.venv && prereq.connected && prereq.ffmpeg;
+  }
 
   function openOnboard() {
     renderObStatus();
@@ -839,6 +913,98 @@
   function closeOnboard() { $("onboard-overlay").classList.remove("open"); }
 
   $("btn-ob-close").addEventListener("click", closeOnboard);
+
+  $("btn-ob-save-key").addEventListener("click", function () {
+    var k = $("ob-claude-key").value.trim();
+    if (!k) return;
+    saveClaudeKey(k);
+    $("ob-claude-key").value = "";
+    $("ob-claude-key").placeholder = "저장됨 (" + maskKey(k) + ") — 변경할 때만 입력";
+    checkPrereq(renderObStatus);
+  });
+
+  var installing = false;
+  function autoInstall() {
+    if (installing) return;
+    installing = true;
+    var cp = nodeReq("child_process");
+    var btn = $("btn-ob-auto");
+    btn.disabled = true;
+    btn.textContent = "설치 중…";
+    var st = $("ob-status");
+    st.innerHTML = "";
+    function log(m) { st.innerHTML += m + "<br>"; st.scrollTop = st.scrollHeight; }
+
+    function fin(errMsg) {
+      installing = false;
+      btn.disabled = false;
+      btn.textContent = "자동 설치 시작";
+      checkPrereq(function () {
+        if (prereqOk()) {
+          log('<span class="ok">✓ 모든 준비 완료 — 바로 사용할 수 있어요!</span>');
+          updateRunButton();
+          setTimeout(closeOnboard, 1500);
+        } else {
+          renderObStatus();
+          if (errMsg) $("ob-status").innerHTML += '<span class="bad">' + errMsg + "</span>";
+        }
+      });
+    }
+
+    function stepEngine() {
+      if (prereq.repo && prereq.venv) { fin(null); return; }
+      if (!(claudeAccount() || claudeApiKey())) { fin("1단계에서 Claude를 먼저 연결해 주세요"); return; }
+      var target = homeDir() + "/BangCut";
+      log("▸ 엔진 설치 중… (클론 + 파이썬 환경, 수 분 소요)");
+      var prompt = "https://github.com/sambang39/BangCut.git 을 " + target +
+        " 에 클론하고(이미 있으면 git -C 로 pull), 그 폴더에서 python3 -m venv .venv 와 " +
+        ".venv/bin/pip install -r requirements.txt 를 순서대로 수행하라. " +
+        "확장 설치(심볼릭 링크·defaults)는 건너뛰어라. 전부 성공하면 DONE만 출력하라.";
+      var child;
+      try {
+        child = cp.spawn(claudeBin(), ["-p", prompt, "--dangerously-skip-permissions"],
+          { env: buildClaudeEnv(), cwd: homeDir(), stdio: ["ignore", "pipe", "pipe"] });
+      } catch (e) { fin("엔진 설치 실행 오류: " + e.message); return; }
+      child.on("error", function (e) { fin("엔진 설치 오류: " + e.message); });
+      child.on("close", function (code) {
+        localStorage.setItem("bangcutEngineRoot", target);
+        if (code === 0) { log("✓ 엔진 설치 단계 종료"); fin(null); }
+        else fin("엔진 설치 실패 (코드 " + code + ") — 다시 시도해 주세요");
+      });
+    }
+
+    function stepFfmpeg() {
+      if (prereq.ffmpeg) { stepEngine(); return; }
+      var fsN = nodeReq("fs");
+      var brew = findBin(fsN, ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]);
+      if (!brew) {
+        log('<span class="bad">✗ ffmpeg 없음 — Homebrew(brew.sh) 설치 후 brew install ffmpeg 를 실행해 주세요</span>');
+        stepEngine();
+        return;
+      }
+      log("▸ ffmpeg 설치 중… (Homebrew, 수 분 소요)");
+      cp.exec(brew + " install ffmpeg", { env: extendedEnv(), maxBuffer: 16 * 1024 * 1024 },
+        function (err) {
+          log(err ? '<span class="bad">✗ ffmpeg 설치 실패 — 수동: brew install ffmpeg</span>' : "✓ ffmpeg 설치 완료");
+          checkPrereq(stepFfmpegDone);
+        });
+      function stepFfmpegDone() { stepEngine(); }
+    }
+
+    function stepCli() {
+      if (prereq.claude) { stepFfmpeg(); return; }
+      log("▸ 클로드 코드 CLI 설치 중…");
+      cp.exec("curl -fsSL https://claude.ai/install.sh | bash",
+        { env: extendedEnv(), maxBuffer: 16 * 1024 * 1024 }, function (err) {
+          if (err) { fin("CLI 설치 실패 — 네트워크 확인 후 다시 시도해 주세요"); return; }
+          log("✓ 클로드 코드 CLI 설치 완료");
+          checkPrereq(stepFfmpeg);
+        });
+    }
+
+    checkPrereq(stepCli);
+  }
+  $("btn-ob-auto").addEventListener("click", autoInstall);
   $("btn-ob-recheck").addEventListener("click", function () {
     var b = $("btn-ob-recheck");
     b.disabled = true;
@@ -876,9 +1042,13 @@
     for (var i = 0; i < btns.length; i++) {
       (function (b) {
         b.addEventListener("click", function () {
-          var src = $(b.dataset.copy);
-          if (!src) return;
-          copyText(src.textContent);
+          var text = b.dataset.copyText;
+          if (!text) {
+            var srcEl = $(b.dataset.copy);
+            if (!srcEl) return;
+            text = srcEl.textContent;
+          }
+          copyText(text);
           b.innerHTML = CHECK_SVG;
           b.classList.add("copied");
           setTimeout(function () {
@@ -900,15 +1070,21 @@
   }
 
   function repoRoot() {
-    var ext = extensionDir();
-    if (!ext) return null;
     var fsN = nodeReq("fs");
     var pathN = nodeReq("path");
     if (!fsN || !pathN) return null;
-    try {
-      var real = fsN.realpathSync(ext); // 심볼릭 링크 → 저장소 내 cep-panel 실제 경로
-      return pathN.dirname(real);
-    } catch (e) { return null; }
+    var cands = [];
+    var ext = extensionDir();
+    if (ext) {
+      try { cands.push(pathN.dirname(fsN.realpathSync(ext))); } catch (e) {}
+    }
+    var saved = localStorage.getItem("bangcutEngineRoot");
+    if (saved) cands.push(saved);
+    cands.push(homeDir() + "/BangCut"); // pkg 설치 유저의 관례 클론 경로
+    for (var i = 0; i < cands.length; i++) {
+      try { if (cands[i] && fsN.existsSync(cands[i] + "/edit.sh")) return cands[i]; } catch (e2) {}
+    }
+    return cands[0] || null;
   }
 
   function writeEngineOverride(root) {
@@ -927,6 +1103,37 @@
   }
 
   // ---------- 프로그레스 ----------
+
+  function kfmt(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+    if (n >= 1000) return (n / 1000).toFixed(1) + "k";
+    return String(n);
+  }
+
+  function clockFmt(ms) {
+    var s = Math.floor(ms / 1000);
+    var m = Math.floor(s / 60);
+    return (m < 10 ? "0" + m : m) + ":" + ((s % 60) < 10 ? "0" + (s % 60) : s % 60);
+  }
+
+  function durFmt(ms) {
+    var s = Math.round(ms / 1000);
+    var m = Math.floor(s / 60);
+    return m ? m + "분 " + (s % 60) + "초" : s + "초";
+  }
+
+  function updateProgMeta() {
+    if (!run.startedAt) return;
+    var t = clockFmt(Date.now() - run.startedAt);
+    $("prog-meta").textContent = t + (run.tokens ? " · " + kfmt(run.tokens) + " 토큰" : "");
+  }
+
+  function addUsage(u) {
+    if (!u) return;
+    run.tokens += (u.input_tokens || 0) + (u.output_tokens || 0) +
+      (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
+    updateProgMeta();
+  }
 
   function logLine(s) {
     s = String(s || "").trim();
@@ -1027,6 +1234,14 @@
     if (!run.running) return;
     run.running = false;
     clearInterval(run.creepTimer);
+    clearInterval(run.timerInt);
+    $("prog-wrap").classList.add("finished");
+    if (run.startedAt) {
+      var parts = [(ok ? "총 " : "경과 ") + durFmt(Date.now() - run.startedAt)];
+      if (run.tokens) parts.push(kfmt(run.tokens) + " 토큰");
+      if (run.cost != null) parts.push("$" + run.cost.toFixed(2));
+      $("prog-meta").textContent = parts.join(" · ");
+    }
     try { if (run.proc) killTree(run.proc); } catch (e) {}
     run.proc = null;
     setRunningUi(false);
@@ -1096,6 +1311,7 @@
   function handleEvent(ev) {
     if (!ev || !ev.type) return;
     if (ev.type === "assistant" && ev.message && ev.message.content) {
+      addUsage(ev.message.usage);
       for (var i = 0; i < ev.message.content.length; i++) {
         var c = ev.message.content[i];
         if (c.type === "text" && c.text) {
@@ -1107,6 +1323,11 @@
         }
       }
     } else if (ev.type === "result") {
+      if (ev.usage) {
+        run.tokens = (ev.usage.input_tokens || 0) + (ev.usage.output_tokens || 0) +
+          (ev.usage.cache_creation_input_tokens || 0) + (ev.usage.cache_read_input_tokens || 0);
+      }
+      if (typeof ev.total_cost_usd === "number") run.cost = ev.total_cost_usd;
       var resText = String(ev.result || "");
       if (ev.is_error && /not logged in|log ?in/i.test(resText)) {
         finishRun(false, "클로드 코드 로그인이 필요합니다 — 터미널에서 claude 를 실행해 로그인한 뒤 다시 시도하세요");
@@ -1153,6 +1374,13 @@
     run.buf = "";
     run.sawDone = false;
     run.failReason = null;
+    run.startedAt = Date.now();
+    run.tokens = 0;
+    run.cost = null;
+    clearInterval(run.timerInt);
+    run.timerInt = setInterval(updateProgMeta, 1000);
+    $("prog-wrap").classList.remove("finished");
+    updateProgMeta();
     $("run-log").textContent = "";
     $("run-log").classList.remove("open");
     $("btn-log-toggle").textContent = "자세히 보기";
@@ -1172,7 +1400,7 @@
     ];
     var child;
     try {
-      child = cp.spawn(bin, args, { cwd: root, env: extendedEnv(), detached: true, stdio: ["ignore", "pipe", "pipe"] });
+      child = cp.spawn(bin, args, { cwd: root, env: buildClaudeEnv(), detached: true, stdio: ["ignore", "pipe", "pipe"] });
     } catch (e) {
       finishRun(false, "클로드 실행 오류: " + e.message);
       return;
@@ -1977,6 +2205,66 @@
     if (pointer.cue >= 0 && pointer.cue < cues.length - 1) mergeUp(pointer.cue + 1);
   });
 
+  // ============ 업데이트 확인 (N) ============
+
+  function semverGt(a, b) {
+    var pa = String(a).replace(/^v/, "").split(".").map(Number);
+    var pb = String(b).replace(/^v/, "").split(".").map(Number);
+    for (var i = 0; i < 3; i++) {
+      var x = pa[i] || 0, y = pb[i] || 0;
+      if (x !== y) return x > y;
+    }
+    return false;
+  }
+
+  function checkUpdate() {
+    var last = parseInt(localStorage.getItem("bangcutUpdCheck") || "0", 10);
+    if (Date.now() - last < 20 * 3600 * 1000) return; // 하루 1회
+    localStorage.setItem("bangcutUpdCheck", String(Date.now()));
+    fetch("https://api.github.com/repos/sambang39/BangCut/releases/latest", {
+      headers: { Accept: "application/vnd.github+json" }
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.tag_name) return;
+      var latest = j.tag_name.replace(/^v/, "");
+      if (!semverGt(latest, PANEL_VERSION)) return;
+      if (localStorage.getItem("bangcutDismissedVer") === latest) return;
+      var dl = j.html_url;
+      for (var i = 0; i < (j.assets || []).length; i++) {
+        if (/\.pkg$/i.test(j.assets[i].name)) { dl = j.assets[i].browser_download_url; break; }
+      }
+      $("ub-text").textContent = "새 버전 v" + latest + " 사용 가능";
+      $("update-banner").style.display = "flex";
+      $("ub-dl").onclick = function () {
+        try { window.cep.util.openURLInDefaultBrowser(dl); } catch (e) {}
+      };
+      $("ub-close").onclick = function () {
+        localStorage.setItem("bangcutDismissedVer", latest);
+        $("update-banner").style.display = "none";
+      };
+    }).catch(function () {});
+  }
+
+  // 엔진 업데이트: git pull + 의존성 갱신
+  $("btn-engine-update").addEventListener("click", function () {
+    var cp = nodeReq("child_process");
+    var root = repoRoot();
+    var btn = $("btn-engine-update");
+    if (!cp || !root) return;
+    btn.disabled = true;
+    btn.textContent = "업데이트 중…";
+    var cmd = "cd " + shellQuote(root) + " && git pull --ff-only && " +
+      "(test -x .venv/bin/pip && .venv/bin/pip install -q -r requirements.txt || true)";
+    cp.exec(cmd, { env: extendedEnv(), maxBuffer: 4 * 1024 * 1024 }, function (err, stdout, stderr) {
+      btn.disabled = false;
+      btn.textContent = "엔진 업데이트";
+      var out = String(stdout || "") + String(stderr || "");
+      var info = $("env-info");
+      if (err) info.innerHTML += '<br><span class="bad">업데이트 실패: ' + out.slice(-120) + "</span>";
+      else info.innerHTML += '<br><span class="ok">엔진 업데이트 완료' +
+        (out.indexOf("Already up to date") !== -1 ? " (이미 최신)" : "") + "</span>";
+    });
+  });
+
   // ============ 초기화 ============
 
   registerKeys();
@@ -1987,4 +2275,8 @@
   setModel(settings.sttModel || "whisper", true);
   updateRunButton();
   showScreen("screen-cutedit");
+  checkUpdate();
+  checkPrereq(function () {
+    if (!prereqOk()) openOnboard(); // 최초/미설치 상태 — 열자마자 안내 (세션당 1회)
+  });
 })();

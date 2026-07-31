@@ -42,8 +42,12 @@
 
 **전제 조건**
 
-1. [Claude Code](https://claude.com/claude-code) 설치 + 로그인
-2. Premiere Pro 2022 이상 (macOS)
+1. **Apple Silicon 맥** (M1 이상 — 전사 엔진이 Apple Silicon 전용)
+2. Premiere Pro 2022 이상
+3. 클로드 **구독 계정**(로그인) 또는 **Claude API 키** 중 하나
+   - 구독: [Claude Code](https://claude.com/claude-code) 설치 후 `claude` 실행 → `/login`
+   - API 키: [console.anthropic.com](https://console.anthropic.com)에서 발급 (사용량 과금) — BangCut 설정에 입력
+4. ffmpeg — 패널의 자동 설치가 Homebrew로 설치를 시도합니다 (없으면 `brew install ffmpeg`)
 
 **설치 — Claude Code에 아래 한 줄을 입력하면 끝**
 
