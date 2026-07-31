@@ -63,6 +63,8 @@
   };
   var source = { path: null, meta: null, imported: false }; // 컷편집 대상 (드롭/선택한 원테이크 파일)
   var detectedSrt = null;
+  var projectPath = null;     // 현재 프리미어 프로젝트 (전환 감지용)
+  var editorDismissed = false; // 적용 완료 후 디폴트 복귀 상태 — 자동 재로드 방지
 
   var cues = [];
   var srtPath = null;
@@ -110,19 +112,75 @@
     }
   })();
 
-  function updateSrtHint(msg) {
-    var el = $("srt-hint");
-    if (el) el.textContent = msg;
+  // ---------- 프로젝트별 작업 기억 (J) ----------
+
+  function projKey(p) { return "bangcutProj:" + p; }
+
+  function rememberProjSrt(path) {
+    if (projectPath) localStorage.setItem(projKey(projectPath), path);
   }
 
-  // 자막 편집 탭 진입: 컷편집 결과 SRT 자동 감지·로드
+  function getProjSrt() {
+    return projectPath ? localStorage.getItem(projKey(projectPath)) : null;
+  }
+
+  function updateEmptyUi() {
+    var rp = getProjSrt();
+    var show = !!(rp && statOk(rp) && !cues.length);
+    var hint = $("resume-hint");
+    if (hint) {
+      hint.style.display = show ? "block" : "none";
+      if (show) $("resume-name").textContent = rp.split("/").pop();
+    }
+  }
+
+  // 자막 편집 화면을 디폴트(빈 상태)로 (K)
+  function resetEditor() {
+    cues = [];
+    srtPath = null;
+    dirty = false;
+    pointer = { cue: -1, word: 0 };
+    history = new C.History(120);
+    typingSquash = null;
+    if (find.open) closeFind();
+    $("editor-file").textContent = "—";
+    $("editor-file").title = "";
+    render();
+    updateEmptyUi();
+    updateHistoryButtons();
+  }
+
+  // 자막 편집 탭 진입: 컷편집 결과 SRT 자동 감지·로드 (적용 완료 후에는 자동 로드 안 함)
   function activateEditor() {
     if (cues.length) return;
-    updateSrtHint("컷편집 결과 자막을 찾는 중…");
+    updateEmptyUi();
+    if (editorDismissed) return;
     refreshSeqInfo(function () {
-      if (detectedSrt && !cues.length) loadFile(detectedSrt);
+      if (detectedSrt && !cues.length && !editorDismissed) loadFile(detectedSrt);
+      updateEmptyUi();
     });
   }
+
+  // 프로젝트 전환 감지 (J): 다른 프로젝트가 열리면 패널을 디폴트로 초기화
+  function pollProject() {
+    if (run.running) return;
+    evalScript("bangGetProjectPath()", function (res) {
+      var p = String(res || "").trim();
+      if (!p || p === "ERR") return;
+      if (p === projectPath) return;
+      var first = projectPath === null;
+      projectPath = p;
+      if (first) { updateEmptyUi(); return; }
+      // 잔여물 제거: 컷편집·자막 편집 모두 디폴트로
+      showDropzone();
+      cutStatus("", "");
+      $("prog-wrap").style.display = "none";
+      editorDismissed = false;
+      resetEditor();
+      refreshSeqInfo();
+    });
+  }
+  setInterval(pollProject, 4000);
 
   // ============ 상태바 ============
 
@@ -138,6 +196,7 @@
   }
 
   function updateSummary() {
+    if (!cues.length) { $summary.textContent = ""; return; }
     var over = 0;
     for (var i = 0; i < cues.length; i++) {
       if (C.maxLineLen(cues[i].text) > C.MAX_LINE) over++;
@@ -193,16 +252,8 @@
       candidates.push(dir + "/" + base + "_edit.srt");
       candidates.push(dir + "/" + base + "_cut.srt");
     }
-    var last = localStorage.getItem("lastSrtPath");
-    if (last) candidates.push(last);
-
     for (var i = 0; i < candidates.length; i++) {
       if (statOk(candidates[i])) { detectedSrt = candidates[i]; break; }
-    }
-    if (!cues.length) {
-      updateSrtHint(detectedSrt
-        ? "감지됨: " + detectedSrt.split("/").pop()
-        : "컷편집 결과가 아직 없습니다 — 컷편집을 먼저 실행하거나 SRT를 직접 여세요");
     }
   }
 
@@ -990,6 +1041,7 @@
       var base = source.path.split("/").pop().replace(/\.[^.]+$/, "");
       var xml = outdir + "/" + base + "_cut.xml";
       var srt = outdir + "/" + base + "_cut.srt";
+      editorDismissed = false;
       var importDone = function () {
         refreshSeqInfo(function () {
           if (detectedSrt && detectedSrt !== srtPath) loadFile(detectedSrt); // 새 자막으로 교체 + 자막 편집 탭 전환
@@ -1840,7 +1892,8 @@
     pointer = { cue: -1, word: 0 };
     history = new C.History(120);
     typingSquash = null;
-    localStorage.setItem("lastSrtPath", path);
+    rememberProjSrt(path);
+    editorDismissed = false;
     $("editor-file").textContent = path.split("/").pop();
     $("editor-file").title = path;
     showScreen("screen-editor");
@@ -1861,6 +1914,7 @@
     if (r.err !== 0) { setStatus("저장 실패 (err " + r.err + ")", "err"); return null; }
     dirty = false;
     updateSummary();
+    rememberProjSrt(out);
     setStatus("저장됨: " + out.split("/").pop(), "ok");
     return out;
   }
@@ -1876,6 +1930,8 @@
       res = String(res || "");
       if (res.indexOf("OK") === 0) {
         setStatus(res.replace(/^OK:?/, "") || "캡션 트랙 생성 완료", "ok");
+        editorDismissed = true; // 적용 완료 → 디폴트 화면 복귀, 자동 재로드 방지
+        resetEditor();
       } else {
         setStatus(res.replace(/^ERR:?/, "적용 실패: "), "err");
       }
@@ -1895,6 +1951,11 @@
   }
   $("btn-open-manual").addEventListener("click", openSrtDialog);
   $("btn-open-file").addEventListener("click", openSrtDialog);
+  $("btn-resume").addEventListener("click", function () {
+    var rp = getProjSrt();
+    if (rp && statOk(rp)) loadFile(rp);
+    else updateEmptyUi();
+  });
 
   $("btn-undo").addEventListener("click", doUndo);
   $("btn-redo").addEventListener("click", doRedo);

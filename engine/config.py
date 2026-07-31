@@ -118,8 +118,11 @@ DEFAULTS = {
     "POLISH_SUBTITLES": True, # 자막 마감 + .vtt/.ass(빵 스타일) 까지 한 번에 생성
     # 자막 한 줄 길이 — 프리미어 말자막 템플릿(폰트 48)에서 2줄 래핑 방지.
     # 분할은 한국어 문법 경계(종결>연결어미>조사, 수식어 끝 금지) DP가 처리.
-    "SUBTITLE_MAX_CHARS": 30,  # 한 줄 최대 글자수(공백 포함) — 빵 템플릿(프리탠다드48+배경) 실측 수용폭
+    "SUBTITLE_MAX_CHARS": 24,  # 한 줄 최대 글자수(공백 포함) — v3: 20자 안팎 목표
     "SUBTITLE_MIN_CHARS": 12,  # 이보다 짧으면 다음과 묶음
+    "SUBTITLE_IDEAL": 20,      # 균형 분할 목표 길이 — v3
+    "SUBTITLE_KEEP_WHOLE": 28, # 이 길이까지의 한 문장은 자르지 않고 통째로 — v3(기계적 자르기 방지)
+    "SUBTITLE_GAP_FILL": 1.2,  # 연속 발화 자막 사이 공백 메움 한도(초) — v3
     "SUBTITLE_IDEAL": 22,      # 균형 분할 목표 길이 (길이 균형보다 문법 경계 우선)
     "SUBTITLE_SNAP_CUT": 0.30, # 자막 전환을 컷 지점에 스냅하는 최대 거리(초)
     "SUBTITLE_NO_PERIOD": True, # 자막에서 마침표(.) 제거 — ?·!·소수점(35.8%)은 유지

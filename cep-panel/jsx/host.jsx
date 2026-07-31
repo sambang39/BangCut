@@ -275,6 +275,11 @@ function bangOpenCutResult(xmlPath, srtPath) {
     } catch (err) { return "ERR:" + err; }
 }
 
+// 현재 프로젝트 경로 — 프로젝트 전환 감지용
+function bangGetProjectPath() {
+    try { return String(app.project.path || app.project.name || ""); } catch (e) { return "ERR"; }
+}
+
 // 현재 플레이헤드 위치(초) — 역방향 싱크용
 function bangGetPlayerPosition() {
     try {

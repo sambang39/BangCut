@@ -21,8 +21,9 @@ from silence_cut import (probe_media, detect_silence, keep_ranges_from_silence,
                          FFMPEG, run, VOICE_CHAIN)
 
 # ── 자막 줄 묶기 설정 (의미 단위 분할) ──
-MIN_CHARS  = 25     # 한 자막 최소 글자수(공백 포함) — 너무 짧으면 다음과 묶음
-MAX_CHARS  = 35     # 한 자막 최대 글자수(공백 포함)
+MIN_CHARS  = 12     # 한 자막 최소 글자수(공백 포함) — 너무 짧으면 다음과 묶음
+MAX_CHARS  = 24     # 한 자막 최대 글자수(공백 포함) — v3: 20자 안팎 목표
+KEEP_WHOLE = 28     # 이 길이까지의 '한 문장'은 기계적으로 자르지 않고 통째로 둠
 MAX_DUR    = 5.0    # 한 자막 최대 길이(초)
 GAP_SPLIT  = 0.6    # 단어 사이 간격이 이보다 크면 우선 분리(초)
 MODEL      = "mlx-community/whisper-large-v3-turbo"   # 한국어 정확+빠름
@@ -289,8 +290,9 @@ def map_words(words, mapper):
     return out
 
 
-IDEAL_CHARS = 18      # 균형 분할 목표 길이 (config로 주입)
+IDEAL_CHARS = 20      # 균형 분할 목표 길이 (config로 주입) — v3: 20자 안팎
 SNAP_CUT    = 0.30    # 자막 전환을 컷 지점에 스냅하는 최대 거리(초)
+GAP_FILL    = 1.2     # 연속 발화 구간에서 자막 사이 공백을 메우는 한도(초) — v3
 NO_PERIOD   = True    # 자막에서 마침표(.) 제거 (?·!·소수점은 유지)
 
 import re as _re
@@ -318,7 +320,9 @@ def snap_to_cuts(lines, cut_points, snap):
             if 0 <= k < len(cut_points) and abs(cut_points[k] - s) <= snap:
                 if best is None or abs(cut_points[k] - s) < abs(best - s):
                     best = cut_points[k]
-        if best is not None and best < e:
+        # v3 지침: 자막 시작은 실제 발화 시점(첫 단어 시작)보다 먼저 나오면 안 됨
+        #          → 컷이 단어 시작 이후(best >= s)일 때만 스냅 허용
+        if best is not None and best < e and best >= s:
             prev = out[-1] if out else None
             # 컷이 이전 자막 표시구간을 과하게 깎지 않는 선에서, 이전 자막 끝을
             # 컷 프레임까지 당기고 현재 자막을 컷에서 시작 — 전환=컷 동시화
@@ -330,15 +334,31 @@ def snap_to_cuts(lines, cut_points, snap):
     return [(s, e, t) for s, e, t in out]
 
 
+def fill_gaps(lines, max_gap=None):
+    """v3 지침: 대사가 이어지는 구간에서는 앞 자막 끝~다음 자막 시작 사이
+       공백(<= max_gap)을 앞 자막을 늘려 메운다. 긴 공백(의도된 정적)은 유지."""
+    mg = GAP_FILL if max_gap is None else max_gap
+    res = []
+    for i, (s, e, t) in enumerate(lines):
+        if i + 1 < len(lines):
+            ns = lines[i + 1][0]
+            gap = ns - e
+            if 0 < gap <= mg:
+                e = round(ns, 3)
+        res.append((s, e, t))
+    return res
+
+
 def regroup(words, mapper, cut_points=None):
     """단어를 컷 타임라인으로 옮기고 한국어 문법 경계 기준 의미 단위로 묶는다.
        cut_points(컷 타임라인상 점프 지점)가 있으면 자막 전환을 컷에 스냅한다."""
     mapped = map_words(words, mapper)
     # 모듈 전역을 호출 시점에 참조 — config 주입값이 반영되도록
     lines = semantic_chunk(mapped, min_c=MIN_CHARS, max_c=MAX_CHARS,
-                           keep_whole=MAX_CHARS, ideal=IDEAL_CHARS)
+                           keep_whole=KEEP_WHOLE, ideal=IDEAL_CHARS)
     lines = sanitize(lines)
     lines = snap_to_cuts(lines, cut_points, SNAP_CUT)
+    lines = fill_gaps(lines)
     if NO_PERIOD:
         lines = [(s, e, strip_periods(t)) for s, e, t in lines]
         lines = [(s, e, t) for s, e, t in lines if t]

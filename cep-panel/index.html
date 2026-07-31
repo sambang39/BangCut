@@ -401,6 +401,14 @@
   .row .btns button:hover { color: var(--text); border-color: #4a4a4a; background: var(--bg-elev2); }
 
   #empty { padding: 40px 20px; text-align: center; color: var(--text-dim); line-height: 2.1; font-size: 12px; }
+  #empty .empty-sub { font-size: 11px; color: var(--text-faint); }
+  #resume-hint {
+    margin-top: 22px; padding-top: 14px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px; color: var(--text-dim);
+  }
+  #resume-hint b { color: var(--text); font-weight: 600; }
+  #resume-hint button { margin-left: 8px; padding: 3px 10px; font-size: 11px; }
   #empty .actions { margin-top: 14px; }
   #srt-hint { color: var(--text-faint); font-size: 11px; }
 
@@ -717,8 +725,13 @@
         </div>
         <div id="cue-list">
           <div id="empty">
-            <p id="srt-hint">컷편집 결과 자막을 확인 중…</p>
+            <p id="srt-hint">컷편집을 실행하면 자막이 자동으로 열립니다</p>
+            <p class="empty-sub">왼쪽 위 폴더 버튼으로 SRT 파일을 직접 열 수도 있어요</p>
             <div class="actions"><button id="btn-open-manual">SRT 직접 열기</button></div>
+            <div id="resume-hint" style="display:none;">
+              <span class="rh-label">이전 작업</span> <b id="resume-name"></b>
+              <button id="btn-resume">이어서 열기</button>
+            </div>
           </div>
         </div>
         <div id="toast"></div>
