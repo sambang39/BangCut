@@ -54,44 +54,45 @@
   button {
     background: var(--bg-elev2);
     color: var(--text);
-    border: 1px solid #4a4a4a;
-    border-radius: 4px;
-    padding: 5px 10px;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
     font-size: 12px;
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
   }
-  button:hover { background: #3c3c3c; border-color: #5a5a5a; }
+  button:hover { background: #3d3d3d; }
   button:active { transform: translateY(0.5px); }
   button:disabled { opacity: 0.35; cursor: default; transform: none; }
-  button:disabled:hover { background: var(--bg-elev2); border-color: #4a4a4a; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  button.primary:hover { background: var(--accent-bright); border-color: var(--accent-bright); }
-  button.danger { border-color: var(--warn); color: var(--warn); background: none; }
+  button:disabled:hover { background: var(--bg-elev2); }
+  button.primary { background: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { background: var(--accent-bright); }
+  button.danger { color: var(--warn); background: rgba(224,108,92,0.12); }
+  button.danger:hover { background: rgba(224,108,92,0.2); }
   button.icon-btn { padding: 4px 7px; display: inline-flex; align-items: center; gap: 4px; }
   button.icon-btn svg { width: 13px; height: 13px; fill: currentColor; }
   kbd {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid #4a4a4a;
-    border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    border-radius: 4px;
     padding: 0 4px;
     font-size: 10px;
     color: var(--text-dim);
   }
   input[type="number"], input[type="text"], input[type="password"] {
     background: var(--bg-input);
-    border: 1px solid #4a4a4a;
-    border-radius: 4px;
+    border: none;
+    border-radius: 8px;
     color: var(--text);
     font-family: inherit;
     font-size: 12px;
-    padding: 6px 8px;
+    padding: 7px 10px;
     width: 100%;
     -webkit-user-select: text;
     user-select: text;
   }
-  input:focus { outline: none; border-color: var(--accent); }
+  input:focus { outline: none; box-shadow: 0 0 0 1.5px var(--accent); }
 
   .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: var(--text-dim); }
   .switch .knob {
@@ -173,22 +174,23 @@
   .field-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
   .field-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
   .seg-row { display: flex; gap: 6px; margin-bottom: 8px; }
-  .seg-row button { flex: 1; padding: 7px 0; font-size: 11px; }
+  .seg-row button { flex: 1; padding: 8px 0; font-size: 11px; background: var(--bg-elev); }
+  .seg-row button:hover { background: var(--bg-elev2); }
   .seg-row button.on {
-    background: var(--sel-bg); border-color: var(--accent);
+    background: rgba(45,140,235,0.18);
     color: var(--accent-bright); font-weight: 600;
   }
-  .seg-mini { display: inline-flex; background: var(--bg-input); border-radius: 6px; padding: 2px; }
+  .seg-mini { display: inline-flex; background: var(--bg-input); border-radius: 999px; padding: 2px; }
   .seg-mini button {
-    background: none; border: none; border-radius: 5px;
+    background: none; border: none; border-radius: 999px;
     padding: 3px 13px; font-size: 11px; color: var(--text-dim);
   }
   .seg-mini button:hover { background: #2a2a2a; }
   .seg-mini button.on { background: var(--accent); color: #fff; font-weight: 600; }
   #dropzone {
-    border: 1.5px dashed #4a4a4a;
-    border-radius: 8px;
-    padding: 22px 12px;
+    border: 1.5px dashed #454545;
+    border-radius: 12px;
+    padding: 24px 12px;
     text-align: center;
     color: var(--text-dim);
     cursor: pointer;
@@ -204,9 +206,8 @@
   #src-card {
     display: flex; align-items: center; gap: 10px;
     background: var(--bg-elev);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
+    border-radius: 12px;
+    padding: 12px 14px;
     margin-bottom: 16px;
   }
   #src-card svg { width: 22px; height: 22px; fill: var(--accent-bright); flex-shrink: 0; }
@@ -227,7 +228,7 @@
     margin: -8px 0 14px;
   }
   #wave-box {
-    background: var(--bg-input); border-radius: 6px;
+    background: var(--bg-input); border-radius: 10px;
     padding: 18px 10px 14px;
     display: flex; align-items: center; justify-content: center; gap: 3px;
     margin-bottom: 5px; min-height: 76px;
@@ -318,7 +319,7 @@
   #prog-right { display: flex; gap: 10px; align-items: baseline; }
   #prog-meta { font-size: 11px; color: var(--text-dim); }
   #prog-steps {
-    background: #161616; border-radius: 6px;
+    background: #161616; border-radius: 10px;
     padding: 10px 12px; margin-bottom: 8px;
     font-family: "SF Mono", Menlo, monospace;
     font-size: 11px; line-height: 2;
@@ -334,7 +335,7 @@
   #run-log {
     display: none;
     margin-top: 10px;
-    background: #161616; border-radius: 5px;
+    background: #161616; border-radius: 10px;
     padding: 8px 10px;
     font-family: "SF Mono", Menlo, monospace; font-size: 10px; line-height: 1.55;
     color: var(--text-dim);
@@ -476,9 +477,9 @@
     position: absolute;
     left: 50%; bottom: 14px;
     transform: translateX(-50%);
-    background: #333;
-    border: 1px solid #4a4a4a;
-    border-radius: 6px;
+    background: #383838;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
     padding: 6px 14px;
     font-size: 11px;
     color: var(--text);
@@ -496,8 +497,7 @@
   /* ---------- 설정 ---------- */
   .set-card {
     background: var(--bg-elev);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     margin-bottom: 12px;
     overflow: hidden;
   }
@@ -510,9 +510,14 @@
     cursor: pointer;
   }
   .set-head:hover { background: #303030; }
-  .set-head .badge { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--text-faint); }
-  .set-head .badge.ok { color: var(--ok); }
-  .set-head .badge.warn { color: #e8a33c; }
+  .set-head .badge {
+    margin-left: auto;
+    font-size: 10px; font-weight: 600;
+    padding: 2.5px 9px; border-radius: 999px;
+    color: var(--text-faint); background: rgba(255,255,255,0.05);
+  }
+  .set-head .badge.ok { color: var(--ok); background: rgba(108,191,108,0.13); }
+  .set-head .badge.warn { color: #e8a33c; background: rgba(232,163,60,0.13); }
   .pw-wrap { position: relative; }
   .pw-wrap input { padding-right: 30px; height: 31px; }
   .pw-wrap input[type="password"] {
@@ -526,7 +531,7 @@
   }
   .pw-wrap .eye:hover { color: var(--text); background: none; }
   .pw-wrap .eye svg { width: 14px; height: 14px; fill: currentColor; display: block; }
-  .set-head .chev { color: var(--text-faint); font-size: 10px; transition: transform 0.15s; }
+  .set-head .chev { color: var(--text-faint); display: inline-flex; transition: transform 0.15s; }
   .set-card.open .set-head .chev { transform: rotate(90deg); }
   .set-body { display: none; padding: 0 14px 14px; }
   .set-card.open .set-body { display: block; }
@@ -552,9 +557,9 @@
   }
   .overlay.open { display: flex; }
   .modal-card {
-    background: #2b2b2b;
-    border: 1px solid #4a4a4a;
-    border-radius: 10px;
+    background: #2e2e2e;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
     padding: 18px 16px 14px;
     width: 100%; max-width: 400px;
     max-height: 90%;
@@ -574,9 +579,8 @@
   .ob-num.done { background: var(--ok); }
   .ob-step-head span.txt { font-size: 12px; line-height: 1.55; color: var(--text); }
   .term {
-    background: #141414;
-    border: 1px solid #3a3a3a;
-    border-radius: 6px;
+    background: #161616;
+    border-radius: 8px;
     padding: 9px 10px;
     display: flex; gap: 8px; align-items: flex-start;
     margin-left: 26px;
@@ -630,7 +634,7 @@
     <b id="ub-text">새 버전 사용 가능</b>
     <span class="ub-sub">설치 전 프리미어를 종료해 주세요</span>
     <button id="ub-dl">다운로드</button>
-    <button id="ub-close">✕</button>
+    <button id="ub-close"><svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M12.6 4.6 11.4 3.4 8 6.9 4.6 3.4 3.4 4.6 6.9 8l-3.5 3.4 1.2 1.2L8 9.1l3.4 3.5 1.2-1.2L9.1 8z"/></svg></button>
   </div>
 
   <!-- 컷편집 -->
@@ -668,7 +672,7 @@
         <div id="wave-box">
           <span class="wave-bars" id="wave-left"></span>
           <span class="wave-pad" id="wave-pad-lead"><em id="wave-pad-lead-v"></em></span>
-          <span id="wave-cut">✂ 제거</span>
+          <span id="wave-cut"><svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" style="vertical-align:-1px;margin-right:3px;"><path d="M9.6 12 4.2 4.5a1 1 0 0 1 1.6-1.2L12 10l6.2-6.7a1 1 0 0 1 1.6 1.2L14.4 12l2.1 2.9a3.4 3.4 0 1 1-1.7 1L12 13.4l-2.8 2.5a3.4 3.4 0 1 1-1.7-1zM7 20a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 7 20zm10 0a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 17 20z"/></svg><em id="wave-cut-v" style="font-style:normal;"></em></span>
           <span class="wave-pad" id="wave-pad-tail"><em id="wave-pad-tail-v"></em></span>
           <span class="wave-bars" id="wave-right"></span>
         </div>
@@ -784,7 +788,7 @@
       <aside id="find-drawer">
         <div id="find-head">
           <span>검색/바꾸기</span>
-          <button id="btn-find-close-drawer" title="닫기 (esc)">✕</button>
+          <button id="btn-find-close-drawer" title="닫기 (esc)"><svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor"><path d="M12.6 4.6 11.4 3.4 8 6.9 4.6 3.4 3.4 4.6 6.9 8l-3.5 3.4 1.2 1.2L8 9.1l3.4 3.5 1.2-1.2L9.1 8z"/></svg></button>
         </div>
         <div id="find-controls">
           <input type="text" id="find-input" placeholder="검색어">
@@ -816,7 +820,7 @@
         <button class="set-head">
           <span>VITO API</span>
           <span class="badge" id="vito-head-badge"></span>
-          <span class="chev">▶</span>
+          <span class="chev"><svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M5.5 3l5 5-5 5V3z"/></svg></span>
         </button>
         <div class="set-body">
           <p class="desc">리턴제로 VITO는 한국어 정확도가 높은 유료 전사입니다. <b>developers.rtzr.ai</b>에서 발급받은 키를 입력하면 전사 모델에서 VITO를 선택할 수 있어요.</p>
@@ -837,7 +841,7 @@
         <button class="set-head">
           <span>Claude 연결</span>
           <span class="badge" id="claude-head-badge"></span>
-          <span class="chev">▶</span>
+          <span class="chev"><svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M5.5 3l5 5-5 5V3z"/></svg></span>
         </button>
         <div class="set-body">
           <p class="desc">클로드 플랜을 구독 중이라면 로그인만으로 구독 요금제의 사용량으로 실행됩니다. 로그인이 없으면 아래 API 키를 사용합니다.</p>
@@ -859,7 +863,7 @@
         <button class="set-head">
           <span>설치 상태</span>
           <span class="badge" id="env-head-badge"></span>
-          <span class="chev">▶</span>
+          <span class="chev"><svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M5.5 3l5 5-5 5V3z"/></svg></span>
         </button>
         <div class="set-body">
           <p class="set-info" id="env-info">확인 중…</p>

@@ -492,7 +492,7 @@
     $("wave-pad-tail-v").textContent = settings.PAD_TAIL + "s";
     var cut = $("wave-cut");
     cut.style.width = Math.round(46 + settings.MIN_SILENCE * 110) + "px";
-    cut.textContent = "✂ > " + settings.MIN_SILENCE + "s";
+    $("wave-cut-v").textContent = "> " + settings.MIN_SILENCE + "s";
   }
 
   function readCutInputs() {
@@ -1583,9 +1583,14 @@
     });
   }
 
+  var CHEV_UP = '<svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M8 4l6 7H2z"/></svg>';
+  var CHEV_DN = '<svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor"><path d="M8 12 2 5h12z"/></svg>';
+
   function miniBtn(label, title, enabled, onClick) {
     var b = document.createElement("button");
-    b.textContent = label;
+    if (label === "▲") b.innerHTML = CHEV_UP;
+    else if (label === "▼") b.innerHTML = CHEV_DN;
+    else b.textContent = label;
     b.title = title;
     b.disabled = !enabled;
     b.addEventListener("click", function (e) { e.stopPropagation(); onClick(); });
