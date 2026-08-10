@@ -676,8 +676,7 @@
       badge.className = "badge " + (has ? "ok" : "warn");
     }
     $("set-vito-id").value = cfg.VITO_CLIENT_ID || "";
-    $("set-vito-secret").value = "";
-    $("set-vito-secret").placeholder = has ? "저장됨 — 변경할 때만 입력" : "발급받은 CLIENT_SECRET";
+    $("set-vito-secret").value = cfg.VITO_CLIENT_SECRET || "";
     var st = $("vito-status");
     st.textContent = has ? "활성화 (" + maskId(cfg.VITO_CLIENT_ID) + ") — VITO 사용 가능" : "";
     st.className = has ? "ok" : "";
@@ -693,13 +692,13 @@
       st.className = "err";
       return;
     }
-    if (!sec && !cfg.VITO_CLIENT_SECRET) {
+    if (!sec) {
       st.textContent = "CLIENT SECRET을 입력해 주세요";
       st.className = "err";
       return;
     }
     cfg.VITO_CLIENT_ID = id;
-    if (sec) cfg.VITO_CLIENT_SECRET = sec;
+    cfg.VITO_CLIENT_SECRET = sec;
     if (!writeEngineConfig(cfg)) {
       st.textContent = "저장 실패 — 엔진 폴더 쓰기 권한을 확인해 주세요";
       st.className = "err";
@@ -722,8 +721,7 @@
       ? "구독 계정: <b>" + email + "</b>"
       : (key ? "API 키(<b>" + maskKey(key) + "</b>)로 실행됩니다 — 사용량만큼 과금"
              : '<span class="bad">클로드와 연결되어 있지 않습니다</span>');
-    $("set-claude-key").value = "";
-    $("set-claude-key").placeholder = key ? "저장됨 (" + maskKey(key) + ") — 변경할 때만 입력" : "sk-ant-…";
+    $("set-claude-key").value = key || "";
     $("claude-key-status").textContent = "";
   }
 
