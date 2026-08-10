@@ -93,7 +93,7 @@ def probe_media(path):
 
 def detect_silence(path):
     """무음 구간 [(start,end), ...] 반환."""
-    r = run([FFMPEG, "-hide_banner", "-nostats", "-i", path,
+    r = run([FFMPEG, "-hide_banner", "-nostats", "-i", path, "-vn",
              "-af", f"silencedetect=noise={NOISE_DB}dB:d={MIN_SILENCE}",
              "-f", "null", "-"])
     err = r.stderr
@@ -108,7 +108,7 @@ def detect_silence(path):
 
 def measure_loudness(path, which="input"):
     """loudnorm 분석 패스로 통합 라우드니스(I)와 트루피크(TP) 측정."""
-    r = run([FFMPEG, "-hide_banner", "-i", path,
+    r = run([FFMPEG, "-hide_banner", "-i", path, "-vn",
              "-af", "loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json",
              "-f", "null", "-"])
     err = r.stderr
