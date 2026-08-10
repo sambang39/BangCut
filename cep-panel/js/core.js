@@ -142,11 +142,12 @@
   // ---------- 컷편집 프리셋 (엔진 config.py 파라미터와 1:1) ----------
   // PAD_LEAD = 말 끝나고 남길 여백 / MIN_SILENCE = 최소 공백 제거 길이 / PAD_TAIL = 다음 말 시작 전 여백
 
+  // 09 수동 편집 실측 캘리브레이션(2026-08-10) — 엔진 공격/표준/보수 스케일과 동일
   var CUT_PRESETS = [
-    { id: "veryshort", label: "매우 짧게", MIN_SILENCE: 0.15, PAD_LEAD: 0.15, PAD_TAIL: 0.06 },
-    { id: "short",     label: "짧게",     MIN_SILENCE: 0.18, PAD_LEAD: 0.18, PAD_TAIL: 0.08 },
-    { id: "medium",    label: "중간",     MIN_SILENCE: 0.30, PAD_LEAD: 0.22, PAD_TAIL: 0.10 },
-    { id: "long",      label: "길게",     MIN_SILENCE: 0.45, PAD_LEAD: 0.30, PAD_TAIL: 0.14 }
+    { id: "veryshort", label: "매우 짧게", MIN_SILENCE: 0.10, PAD_LEAD: 0.02, PAD_TAIL: 0.02 },
+    { id: "short",     label: "짧게",     MIN_SILENCE: 0.12, PAD_LEAD: 0.04, PAD_TAIL: 0.03 },
+    { id: "medium",    label: "중간",     MIN_SILENCE: 0.15, PAD_LEAD: 0.10, PAD_TAIL: 0.05 },
+    { id: "long",      label: "길게",     MIN_SILENCE: 0.25, PAD_LEAD: 0.18, PAD_TAIL: 0.08 }
   ];
 
   // 텍스트를 단어 토큰으로 분해 (문자 오프셋 보존 — 공백/줄바꿈 복원용)
