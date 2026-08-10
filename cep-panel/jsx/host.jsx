@@ -72,25 +72,47 @@ function bangApplySrt(srtPath) {
         if (!f.exists) return "ERR:파일이 없습니다: " + srtPath;
         var wantName = f.displayName;
 
-        // 같은 이름의 기존 임포트 제거(재적용 시 중복 방지)
+        // 대상 빈: 최신 "N트" 회차 빈 → 없으면 BangCut 빈
         var root = proj.rootItem;
-        for (var i = root.children.numItems - 1; i >= 0; i--) {
-            var c0 = root.children[i];
-            if (c0 && c0.name === wantName && c0.type === ProjectItemType.FILE) {
-                try { c0.deleteBin ? c0.deleteBin() : proj.deleteItem(c0); } catch (eDel) {}
+        var bin = bangGetBin();
+        var target = bin, maxN = 0;
+        for (var b = 0; b < bin.children.numItems; b++) {
+            var cb = bin.children[b];
+            if (cb && cb.type === ProjectItemType.BIN) {
+                var mm = String(cb.name).match(/^(\d+)트/);
+                if (mm && parseInt(mm[1], 10) >= maxN) { maxN = parseInt(mm[1], 10); target = cb; }
             }
         }
+        // 같은 이름의 기존 임포트 제거(루트·대상 빈 — 재적용 시 중복 방지)
+        function purge(container) {
+            for (var i = container.children.numItems - 1; i >= 0; i--) {
+                var c0 = container.children[i];
+                if (c0 && c0.name === wantName && c0.type === ProjectItemType.FILE) {
+                    try { c0.deleteBin ? c0.deleteBin() : proj.deleteItem(c0); } catch (eDel) {}
+                }
+            }
+        }
+        purge(root);
+        purge(target);
 
         var beforeN = root.children.numItems;
-        proj.importFiles([srtPath], true, root, false);
-        var afterN = root.children.numItems;
+        proj.importFiles([srtPath], true, target, false);
 
         var item = null;
-        for (var j = afterN - 1; j >= 0; j--) {
-            var c = root.children[j];
-            if (c && c.name === wantName) { item = c; break; }
+        for (var j = target.children.numItems - 1; j >= 0; j--) {
+            if (target.children[j] && target.children[j].name === wantName) { item = target.children[j]; break; }
         }
-        if (!item && afterN > beforeN) item = root.children[afterN - 1];
+        if (!item) {
+            // 루트로 떨어졌으면 회수
+            for (var r2 = root.children.numItems - 1; r2 >= beforeN - 1 && r2 >= 0; r2--) {
+                var rc = root.children[r2];
+                if (rc && rc.name === wantName) {
+                    try { rc.moveBin(target); } catch (eMv3) {}
+                    item = rc;
+                    break;
+                }
+            }
+        }
         if (!item) return "ERR:SRT 임포트에 실패했습니다";
 
         // 캡션 트랙 생성 (Premiere 15+). 포맷 인자는 버전에 따라 달라 순차 시도.
@@ -287,6 +309,75 @@ function bangGetPlayerPosition() {
         if (!seq) return "ERR";
         return String(seq.getPlayerPosition().seconds);
     } catch (e) { return "ERR"; }
+}
+
+// BangCut 빈 안의 "N트_" 하위 빈 중 다음 번호 계산
+function bangNextRunNo(bin) {
+    var n = 0;
+    for (var i = 0; i < bin.children.numItems; i++) {
+        var c = bin.children[i];
+        if (c && c.type === ProjectItemType.BIN) {
+            var m = String(c.name).match(/^(\d+)트/);
+            if (m && parseInt(m[1], 10) > n) n = parseInt(m[1], 10);
+        }
+    }
+    return n + 1;
+}
+
+// 실행 결과(XML+SRT)를 "N트_라벨" 하위 빈으로 임포트하고 시퀀스를 연다
+function bangImportRun(xmlPath, srtPath, label) {
+    try {
+        var proj = app.project;
+        if (!proj) return "ERR:열린 프로젝트가 없습니다";
+        var fx = new File(xmlPath);
+        if (!fx.exists) return "ERR:XML이 없습니다: " + xmlPath;
+        var root = proj.rootItem;
+        var bin = bangGetBin();
+        if (!bin) return "ERR:BangCut 빈 생성 실패";
+
+        var runNo = bangNextRunNo(bin);
+        var runBin = bin.createBin(runNo + "트_" + (label || "결과"));
+        if (!runBin) return "ERR:회차 빈 생성 실패";
+
+        var beforeIds = {};
+        for (var s = 0; s < proj.sequences.numSequences; s++) {
+            beforeIds[String(proj.sequences[s].sequenceID)] = 1;
+        }
+
+        // XML 임포트 + 루트로 떨어진 항목 전부 회차 빈으로
+        var beforeN = root.children.numItems;
+        proj.importFiles([xmlPath], true, runBin, false);
+        var strays = [];
+        for (var m = beforeN; m < root.children.numItems; m++) {
+            if (root.children[m]) strays.push(root.children[m]);
+        }
+        for (var t = 0; t < strays.length; t++) {
+            try { strays[t].moveBin(runBin); } catch (eMv) {}
+        }
+
+        // SRT도 같은 회차 빈으로
+        var fsrt = srtPath ? new File(srtPath) : null;
+        if (fsrt && fsrt.exists) {
+            var b2 = root.children.numItems;
+            proj.importFiles([srtPath], true, runBin, false);
+            for (var k = b2; k < root.children.numItems; k++) {
+                if (root.children[k]) { try { root.children[k].moveBin(runBin); } catch (eMv2) {} }
+            }
+        }
+
+        // 새 시퀀스 → 이름에 회차 표기 + 타임라인 오픈
+        var newSeq = null;
+        for (var s2 = 0; s2 < proj.sequences.numSequences; s2++) {
+            if (!beforeIds[String(proj.sequences[s2].sequenceID)]) { newSeq = proj.sequences[s2]; break; }
+        }
+        if (newSeq) {
+            try { newSeq.name = newSeq.name.replace(/ · \d+트.*$/, "") + " · " + runNo + "트"; } catch (eNm) {}
+            try { proj.openSequence(newSeq.sequenceID); } catch (eA) {}
+            try { proj.activeSequence = newSeq; } catch (eB) {}
+            return "OK:" + runNo + "트 폴더로 임포트 — 시퀀스가 타임라인에 열렸습니다";
+        }
+        return "OK:" + runNo + "트 폴더로 임포트 완료 (시퀀스는 프로젝트 창에서 열어주세요)";
+    } catch (err) { return "ERR:" + err; }
 }
 
 // 패널 연결 확인용

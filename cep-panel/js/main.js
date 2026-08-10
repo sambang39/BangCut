@@ -65,6 +65,7 @@
   };
   var source = { path: null, meta: null, imported: false }; // 컷편집 대상 (드롭/선택한 원테이크 파일)
   var detectedSrt = null;
+  var xmlBasis = null; // 현재 시퀀스의 기준 XML (마킹 수술의 입력)
   var projectPath = null;     // 현재 프리미어 프로젝트 (전환 감지용)
   var editorDismissed = false; // 적용 완료 후 디폴트 복귀 상태 — 자동 재로드 방지
 
@@ -124,6 +125,11 @@
 
   function rememberProjSrt(path) {
     if (projectPath) localStorage.setItem(projKey(projectPath), path);
+  }
+
+  function setXmlBasis(path) {
+    xmlBasis = path;
+    if (projectPath) localStorage.setItem("bangcutXmlBasis:" + projectPath, path);
   }
 
   function getProjSrt() {
@@ -1300,11 +1306,17 @@
         });
       };
       if (statOk(xml)) {
-        evalScript("bangOpenCutResult(" + JSON.stringify(xml) + "," + JSON.stringify(srt) + ")", function (res) {
+        // 회차 스냅샷 사본(기준 XML) — 같은 경로 재임포트 문제 회피 + 수술 기준 확보
+        var dd = new Date();
+        var st2 = ("0" + dd.getHours()).slice(-2) + ("0" + dd.getMinutes()).slice(-2) + ("0" + dd.getSeconds()).slice(-2);
+        var xmlSnap = xml.replace(/\.xml$/i, "_" + st2 + ".xml");
+        try { nodeReq("fs").copyFileSync(xml, xmlSnap); } catch (eCp) { xmlSnap = xml; }
+        evalScript("bangImportRun(" + JSON.stringify(xmlSnap) + "," + JSON.stringify(srt) + ",\"러프컷\")", function (res) {
           res = String(res || "");
           if (res.indexOf("OK") === 0) {
             cutStatus(res.replace(/^OK:?/, ""), "ok");
             logLine("== " + res.replace(/^OK:?/, ""));
+            setXmlBasis(xmlSnap);
           } else {
             cutStatus(res.replace(/^ERR:?/, "결과 임포트 실패: "), "err");
             logLine("== " + res);
@@ -2400,42 +2412,199 @@
     return null;
   }
 
-  // 마킹 삭제 반영: extra_cuts 병합 → 로컬 엔진 재실행(클로드·토큰 불필요) → 결과 임포트
+  // ============ XML 수술 (Q4 v2) ============
+  // 엔진이 만든 FCP7 XML에서 컷타임 구간을 직접 제거 — 재실행 없이 결정적으로.
+  // 구조 전제(엔진 생성 규칙): cv/ca 1:1 쌍, 연속 타임라인, 파일 정의는 첫 클립에만.
+
+  function surgeryCutXml(xmlText, rangesSec) {
+    function nums(block, tag) {
+      var m = block.match(new RegExp("<" + tag + ">(-?\\d+)</" + tag + ">"));
+      return m ? parseInt(m[1], 10) : null;
+    }
+    function setTag(block, tag, v) {
+      return block.replace(new RegExp("<" + tag + ">-?\\d+</" + tag + ">"), "<" + tag + ">" + v + "</" + tag + ">");
+    }
+    var tbM = xmlText.match(/<timebase>(\d+)<\/timebase>/);
+    var ntsc = /<ntsc>TRUE<\/ntsc>/.test(xmlText);
+    if (!tbM) throw new Error("타임베이스를 찾지 못했습니다");
+    var fps = ntsc ? parseInt(tbM[1], 10) * 1000 / 1001 : parseInt(tbM[1], 10);
+
+    // 클립 블록 추출 (문서 순서: 비디오 전부 → 오디오 전부)
+    var blockRe = /<clipitem id="(c[va]\d+)">[\s\S]*?<\/clipitem>/g;
+    var vBlocks = [], aBlocks = [], m0;
+    var firstIdx = -1, lastIdx = -1;
+    while ((m0 = blockRe.exec(xmlText))) {
+      if (firstIdx < 0) firstIdx = m0.index;
+      lastIdx = m0.index + m0[0].length;
+      if (m0[1].charAt(1) === "v") vBlocks.push(m0[0]);
+      else aBlocks.push(m0[0]);
+    }
+    if (!vBlocks.length || vBlocks.length !== aBlocks.length) {
+      throw new Error("클립 구조 인식 실패 (v:" + vBlocks.length + " a:" + aBlocks.length + ")");
+    }
+
+    // 비디오/오디오 사이 구분자(비디오 마지막 블록 뒤 ~ 오디오 첫 블록 앞)
+    var lastVEnd = xmlText.indexOf(vBlocks[vBlocks.length - 1]) + vBlocks[vBlocks.length - 1].length;
+    var firstAStart = xmlText.indexOf(aBlocks[0]);
+    var header = xmlText.slice(0, firstIdx);
+    var middle = xmlText.slice(lastVEnd, firstAStart);
+    var footer = xmlText.slice(lastIdx);
+
+    // 전체 파일 정의 추출(첫 클립에만 존재) → 이후 자기닫힘 참조로 정규화
+    function fullFileDef(block) {
+      var fm = block.match(/<file id="(file-\d+)">[\s\S]*?<\/file>/);
+      return fm ? { id: fm[1], xml: fm[0] } : null;
+    }
+    var vFile = fullFileDef(vBlocks[0]);
+    var aFile = fullFileDef(aBlocks[0]);
+    if (!vFile || !aFile) throw new Error("파일 정의를 찾지 못했습니다");
+
+    // 쌍 목록
+    var pairs = [];
+    for (var i = 0; i < vBlocks.length; i++) {
+      pairs.push({
+        vT: vBlocks[i], aT: aBlocks[i],
+        start: nums(vBlocks[i], "start"), end: nums(vBlocks[i], "end"),
+        vin: nums(vBlocks[i], "in"), ain: nums(aBlocks[i], "in")
+      });
+    }
+
+    // 프레임 구간 (병합·정렬 후 뒤에서부터 적용)
+    var fr = rangesSec.map(function (g) { return [Math.round(g[0] * fps), Math.round(g[1] * fps)]; })
+      .filter(function (g) { return g[1] > g[0]; })
+      .sort(function (a, b) { return a[0] - b[0]; });
+    var totalD = 0;
+    for (var r0 = 0; r0 < fr.length; r0++) totalD += fr[r0][1] - fr[r0][0];
+
+    for (var r = fr.length - 1; r >= 0; r--) {
+      var rs = fr[r][0], re = fr[r][1], D = re - rs;
+      var out = [];
+      for (var p = 0; p < pairs.length; p++) {
+        var c = pairs[p];
+        if (c.end <= rs) { out.push(c); continue; }
+        if (c.start >= re) { c.start -= D; c.end -= D; out.push(c); continue; }
+        var leftLen = Math.max(0, rs - c.start);
+        var rightLen = Math.max(0, c.end - re);
+        if (leftLen > 0) {
+          out.push({ vT: c.vT, aT: c.aT, start: c.start, end: c.start + leftLen,
+                     vin: c.vin, ain: c.ain });
+        }
+        if (rightLen > 0) {
+          var skip = re - c.start; // 소스에서 건너뛸 양
+          out.push({ vT: c.vT, aT: c.aT, start: rs, end: rs + rightLen,
+                     vin: c.vin + skip, ain: c.ain + skip });
+        }
+      }
+      pairs = out;
+    }
+    if (!pairs.length) throw new Error("모든 클립이 삭제됩니다 — 마킹을 확인해 주세요");
+
+    // 검증 1: 연속성·시작 0
+    pairs.sort(function (a, b) { return a.start - b.start; });
+    if (pairs[0].start !== 0) throw new Error("검증 실패: 시작이 0이 아님 (" + pairs[0].start + ")");
+    for (var q = 0; q < pairs.length - 1; q++) {
+      if (pairs[q].end !== pairs[q + 1].start) {
+        throw new Error("검증 실패: 클립 불연속 @" + pairs[q].end + "→" + pairs[q + 1].start);
+      }
+    }
+    var newDur = pairs[pairs.length - 1].end;
+
+    // 블록 재조립
+    function rebuild(tmpl, isVideo, k, c) {
+      var dur = c.end - c.start;
+      var srcIn = isVideo ? c.vin : c.ain;
+      var b = tmpl;
+      b = b.replace(/<clipitem id="c[va]\d+">/, '<clipitem id="' + (isVideo ? "cv" : "ca") + k + '">');
+      b = setTag(b, "start", c.start);
+      b = setTag(b, "end", c.end);
+      b = setTag(b, "in", srcIn);
+      b = setTag(b, "out", srcIn + dur);
+      // 파일 참조 정규화(자기닫힘) → 첫 클립에만 전체 정의 재주입
+      var fid = isVideo ? vFile.id : aFile.id;
+      b = b.replace(/<file id="file-\d+">[\s\S]*?<\/file>/, '<file id="' + fid + '"/>');
+      b = b.replace(/<file id="file-\d+"\/>/, '<file id="' + fid + '"/>');
+      if (k === 0) b = b.replace('<file id="' + fid + '"/>', isVideo ? vFile.xml : aFile.xml);
+      // 링크 재생성 (쌍 상호 참조 + clipindex)
+      b = b.replace(/<link>[\s\S]*?<\/link>\s*<link>[\s\S]*?<\/link>/,
+        "<link><linkclipref>cv" + k + "</linkclipref><mediatype>video</mediatype><trackindex>1</trackindex><clipindex>" + (k + 1) + "</clipindex></link>" +
+        "<link><linkclipref>ca" + k + "</linkclipref><mediatype>audio</mediatype><trackindex>1</trackindex><clipindex>" + (k + 1) + "</clipindex></link>");
+      // 오디오 페이드 키프레임 재계산(있을 때만): [0, f, dur-f, dur]
+      if (!isVideo && /<keyframe><when>/.test(b)) {
+        var kfs = b.match(/<keyframe><when>\d+<\/when>/g);
+        if (kfs && kfs.length === 4) {
+          var oldF = parseInt(kfs[1].match(/\d+/)[0], 10);
+          var f = Math.max(1, Math.min(oldF, Math.floor(dur / 2)));
+          var whens = [0, f, dur - f, dur];
+          var idx = 0;
+          b = b.replace(/<keyframe><when>\d+<\/when>/g, function () {
+            return "<keyframe><when>" + whens[idx++] + "</when>";
+          });
+        }
+      }
+      return b;
+    }
+
+    var vOut = [], aOut = [];
+    for (var k2 = 0; k2 < pairs.length; k2++) {
+      vOut.push(rebuild(pairs[k2].vT, true, k2, pairs[k2]));
+      aOut.push(rebuild(pairs[k2].aT, false, k2, pairs[k2]));
+    }
+
+    // 시퀀스 duration 갱신 (시퀀스 레벨 첫 duration)
+    var newXml = header + vOut.join("\n") + middle + aOut.join("\n") + footer;
+    var seqDurRe = /(<sequence[^>]*>\s*<name>[^<]*<\/name>\s*<duration>)(\d+)(<\/duration>)/;
+    var sd = newXml.match(seqDurRe);
+    if (sd) newXml = newXml.replace(seqDurRe, "$1" + newDur + "$3");
+
+    // 검증 2: out-in == end-start 전수
+    var chk = /<clipitem id="c[va]\d+">[\s\S]*?<\/clipitem>/g, cm;
+    while ((cm = chk.exec(newXml))) {
+      var bs = nums(cm[0], "start"), be = nums(cm[0], "end");
+      var bi = nums(cm[0], "in"), bo = nums(cm[0], "out");
+      if (bo - bi !== be - bs) throw new Error("검증 실패: in/out 불일치 @" + bs);
+    }
+    return { xml: newXml, removedFrames: totalD, newDurFrames: newDur, clips: pairs.length };
+  }
+
+  // 마킹 삭제 반영 v2: XML 수술 — 엔진·클로드·재실행 없이 즉시 (토큰 0, 1초 미만)
   function applyWithCuts(r) {
     if (run.running) { setStatus("컷편집 실행 중에는 반영할 수 없습니다", "err"); return; }
-    var cp = nodeReq("child_process");
     var fsN = nodeReq("fs");
-    var root = repoRoot();
-    if (!cp || !fsN || !root || !statOk(root + "/edit.sh")) {
-      setStatus("엔진을 찾지 못했습니다", "err");
+    if (!fsN) { setStatus("Node 환경을 찾지 못했습니다", "err"); return; }
+
+    // 기준 XML(현재 시퀀스의 원본) — 컷편집/이전 반영 시 기록됨
+    var basis = xmlBasis || (projectPath && localStorage.getItem("bangcutXmlBasis:" + projectPath));
+    if (!basis || !statOk(basis)) {
+      setStatus("이 시퀀스의 기준 XML을 찾을 수 없습니다 — 컷편집을 새로 실행한 결과에서 마킹해 주세요", "err");
       return;
     }
-    var video = videoForSrt(srtPath);
-    if (!video) { setStatus("원본 영상을 찾지 못했습니다 (SRT 폴더 상위에 있어야 함)", "err"); return; }
+
     var outdir = srtPath.replace(/\/[^\/]+$/, "");
     var base = srtPath.split("/").pop().replace(/(_cut)?(_edit)?\.srt$/i, "");
 
-    // 기존 추가컷(반복 테이크 등)과 병합해 손실 방지
-    var combined = [];
-    try {
-      var prev = JSON.parse(fsN.readFileSync(outdir + "/extra_cuts.json", "utf8"));
-      if (prev && prev.length) {
-        combined = prev.filter(function (item) {
-          // keep(강제 보존) 항목이 사용자 삭제 표시와 겹치면 제거 — 사용자 의도가 우선
-          if (item.length > 3 && String(item[3]).toLowerCase() === "keep") {
-            for (var g = 0; g < r.orig.length; g++) {
-              if (item[0] < r.orig[g][1] && r.orig[g][0] < item[1]) return false;
-            }
-          }
-          return true;
-        });
-      }
-    } catch (e) {}
-    r.orig.forEach(function (g) { combined.push([g[0], g[1], "패널 삭제 표시"]); });
-    var cutsFile = outdir + "/bangcut_cuts.json";
-    fsN.writeFileSync(cutsFile, JSON.stringify(combined));
+    var btn = $("btn-apply");
+    btn.disabled = true;
+    $("apply-overlay").classList.add("open");
+    $("ao-time").textContent = "00:00";
+    run.running = true;
 
-    // 사용자 텍스트 보존 SRT: 마킹 단어 제거 + 시간 리맵 (엔진 재생성 자막 대신 사용)
+    function fail(msg) {
+      run.running = false;
+      btn.disabled = false;
+      $("apply-overlay").classList.remove("open");
+      setStatus(msg, "err");
+    }
+
+    var result;
+    try {
+      var xmlText = fsN.readFileSync(basis, "utf8");
+      result = surgeryCutXml(xmlText, r.cut);
+    } catch (e) {
+      fail("컷 수술 실패: " + e.message);
+      return;
+    }
+
+    // 사용자 텍스트 보존 SRT: 마킹 단어 제거 + 시간 리맵 (수술과 동일 구간 → 정합 보장)
     var newCues = [];
     for (var i = 0; i < cues.length; i++) {
       var c = cues[i];
@@ -2451,73 +2620,40 @@
       if (ne - ns < 0.15) continue;
       newCues.push({ start: ns, end: ne, text: text });
     }
-    var srtFile = outdir + "/" + base + "_cut_edit.srt";
 
-    var btn = $("btn-apply");
-    btn.disabled = true;
-    btn.textContent = "삭제 반영 중…";
-    run.running = true;
-    $("apply-overlay").classList.add("open");
-    var aoStart = Date.now();
-    var aoTimer = setInterval(function () {
-      var s = Math.floor((Date.now() - aoStart) / 1000);
-      $("ao-time").textContent = (s < 600 ? ("0" + Math.floor(s / 60)).slice(-2) : Math.floor(s / 60)) + ":" + ("0" + (s % 60)).slice(-2);
-    }, 1000);
-
-    var args = [root + "/edit.sh", video, "--extra-cuts", cutsFile];
-    if (settings.resolution === "FHD") args.push("--fhd");
-    var child = cp.spawn("/bin/bash", args,
-      { cwd: root, env: extendedEnv(), stdio: ["ignore", "pipe", "pipe"] });
-    run.proc = child;
-    child.stdout.on("data", function (d) {
-      String(d).split("\n").forEach(function (l) { if (l.trim()) logLine(l.trim()); });
-    });
-    child.stderr.on("data", function (d) {
-      String(d).split("\n").forEach(function (l) { if (l.trim()) logLine("! " + l.trim()); });
-    });
-    function doneCuts(ok, msg) {
-      run.running = false;
-      run.proc = null;
-      btn.disabled = false;
-      btn.textContent = "시퀀스에 적용";
-      clearInterval(aoTimer);
-      if (!ok) {
-        $("apply-overlay").classList.remove("open");
-        setStatus(msg || "컷 재생성 실패", "err");
-        return;
-      }
-      var fs2 = cepFs();
-      fs2.writeFile(srtFile, C.serializeSrt(newCues), window.cep.encoding.UTF8);
-      // 같은 경로 재임포트는 프리미어가 무시할 수 있음 → 고유 이름 사본으로 임포트해 새 시퀀스 보장
-      var d = new Date();
-      var stamp = ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2);
-      var xmlCopy = outdir + "/" + base + "_cut_" + stamp + ".xml";
-      try { nodeReq("fs").copyFileSync(outdir + "/" + base + "_cut.xml", xmlCopy); }
-      catch (e) { xmlCopy = outdir + "/" + base + "_cut.xml"; }
-      evalScript("bangOpenCutResult(" + JSON.stringify(xmlCopy) + "," + JSON.stringify(srtFile) + ")",
-        function (res2) {
-          res2 = String(res2 || "");
-          if (res2.indexOf("OK") !== 0) {
-            $("apply-overlay").classList.remove("open");
-            setStatus(res2.replace(/^ERR:?/, "임포트 실패: "), "err");
-            return;
-          }
-          // 새 시퀀스에 캡션 트랙까지 삽입
-          evalScript("bangApplySrt(" + JSON.stringify(srtFile) + ")", function (res3) {
-            $("apply-overlay").classList.remove("open");
-            res3 = String(res3 || "");
-            setStatus(res3.indexOf("OK") === 0
-              ? "삭제 반영 완료 — 새 러프컷과 자막이 타임라인에 적용됐습니다"
-              : "새 러프컷은 열렸지만 캡션 삽입 실패: " + res3.replace(/^ERR:?/, ""),
-              res3.indexOf("OK") === 0 ? "ok" : "err");
-            loadFile(srtFile);
-          });
-        });
+    var d = new Date();
+    var stamp = ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2);
+    var xmlFile = outdir + "/" + base + "_cut_" + stamp + ".xml";
+    var srtFile = outdir + "/" + base + "_cut_" + stamp + ".srt";
+    try {
+      fsN.writeFileSync(xmlFile, result.xml);
+      fsN.writeFileSync(srtFile, C.serializeSrt(newCues));
+    } catch (e2) {
+      fail("결과 파일 쓰기 실패: " + e2.message);
+      return;
     }
-    child.on("error", function (e) { doneCuts(false, "엔진 실행 오류: " + e.message); });
-    child.on("close", function (code) {
-      doneCuts(code === 0, code === 0 ? "" : "엔진 종료 코드 " + code + " — 다시 시도해 주세요");
-    });
+    logLine("== XML 수술: " + r.cut.length + "구간 · " + Math.round(result.removedFrames / seqInfo.fps * 10) / 10 + "초 제거, 클립 " + result.clips + "쌍");
+
+    evalScript("bangImportRun(" + JSON.stringify(xmlFile) + "," + JSON.stringify(srtFile) + ",\"삭제반영\")",
+      function (res2) {
+        res2 = String(res2 || "");
+        if (res2.indexOf("OK") !== 0) {
+          fail(res2.replace(/^ERR:?/, "임포트 실패: "));
+          return;
+        }
+        evalScript("bangApplySrt(" + JSON.stringify(srtFile) + ")", function (res3) {
+          run.running = false;
+          btn.disabled = false;
+          $("apply-overlay").classList.remove("open");
+          res3 = String(res3 || "");
+          setStatus(res3.indexOf("OK") === 0
+            ? "삭제 반영 완료 — 새 러프컷과 자막이 타임라인에 적용됐습니다"
+            : "새 러프컷은 열렸지만 캡션 삽입 실패: " + res3.replace(/^ERR:?/, ""),
+            res3.indexOf("OK") === 0 ? "ok" : "err");
+          setXmlBasis(xmlFile);
+          loadFile(srtFile);
+        });
+      });
   }
 
   function applyToSequence() {
@@ -2646,6 +2782,26 @@
   });
 
   // ============ 초기화 ============
+
+  // 수술 검증 훅 (개발용): 실제 XML에 테스트 구간을 적용하고 무결성 리포트
+  window.__bangSurgeryTest = function (xmlPath, ranges) {
+    var fsN = nodeReq("fs");
+    var xml = fsN.readFileSync(xmlPath, "utf8");
+    var oldDur = parseInt(xml.match(/<sequence[^>]*>\s*<name>[^<]*<\/name>\s*<duration>(\d+)<\/duration>/)[1], 10);
+    var res = surgeryCutXml(xml, ranges);
+    // DOM 파싱 무결성
+    var doc = new DOMParser().parseFromString(res.xml, "text/xml");
+    var perr = doc.getElementsByTagName("parsererror").length;
+    // 재검증: 새 XML의 시퀀스 duration
+    var nd = parseInt(res.xml.match(/<sequence[^>]*>\s*<name>[^<]*<\/name>\s*<duration>(\d+)<\/duration>/)[1], 10);
+    var fullFiles = (res.xml.match(/<file id="file-\d+">/g) || []).length;
+    return {
+      oldDur: oldDur, newDurTag: nd, newDurCalc: res.newDurFrames,
+      removed: res.removedFrames, clips: res.clips,
+      parseErrors: perr, fullFileDefs: fullFiles,
+      links: (res.xml.match(/<link>/g) || []).length
+    };
+  };
 
   // 개발 디버그 훅 (내부 상태 점검용)
   window.__bangDebug = function () {
