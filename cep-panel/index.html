@@ -514,7 +514,12 @@
   .set-head .badge.ok { color: var(--ok); }
   .set-head .badge.warn { color: #e8a33c; }
   .pw-wrap { position: relative; }
-  .pw-wrap input { padding-right: 30px; }
+  .pw-wrap input { padding-right: 30px; height: 31px; }
+  .pw-wrap input[type="password"] {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
   .pw-wrap .eye {
     position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
     background: none; border: none; padding: 3px 5px; color: var(--text-faint);
@@ -860,7 +865,7 @@
           <p class="set-info" id="env-info">확인 중…</p>
           <div style="display:flex; gap:6px; margin-top:8px;">
             <button id="btn-recheck-env">다시 확인</button>
-            <button id="btn-engine-update">엔진 업데이트</button>
+            <button id="btn-engine-update">업데이트</button>
           </div>
         </div>
       </div>

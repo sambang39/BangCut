@@ -2303,7 +2303,7 @@
       "(test -x .venv/bin/pip && .venv/bin/pip install -q -r requirements.txt || true)";
     cp.exec(cmd, { env: extendedEnv(), maxBuffer: 4 * 1024 * 1024 }, function (err, stdout, stderr) {
       btn.disabled = false;
-      btn.textContent = "엔진 업데이트";
+      btn.textContent = "업데이트";
       var out = String(stdout || "") + String(stderr || "");
       var info = $("env-info");
       if (err) info.innerHTML += '<br><span class="bad">업데이트 실패: ' + out.slice(-120) + "</span>";
