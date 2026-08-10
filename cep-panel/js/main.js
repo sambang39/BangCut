@@ -684,36 +684,19 @@
     }
     $("set-vito-id").value = cfg.VITO_CLIENT_ID || "";
     $("set-vito-secret").value = cfg.VITO_CLIENT_SECRET || "";
-    var st = $("vito-status");
-    st.textContent = has ? "활성화 (" + maskId(cfg.VITO_CLIENT_ID) + ") — VITO 사용 가능" : "";
-    st.className = has ? "ok" : "";
   }
 
   function saveVitoKeys() {
     var id = $("set-vito-id").value.trim();
     var sec = $("set-vito-secret").value.trim();
     var cfg = readEngineConfig();
-    var st = $("vito-status");
-    if (!id) {
-      st.textContent = "CLIENT ID를 입력해 주세요";
-      st.className = "err";
-      return;
-    }
-    if (!sec) {
-      st.textContent = "CLIENT SECRET을 입력해 주세요";
-      st.className = "err";
-      return;
-    }
+    if (!id) { setStatus("CLIENT ID를 입력해 주세요", "err"); return; }
+    if (!sec) { setStatus("CLIENT SECRET을 입력해 주세요", "err"); return; }
     cfg.VITO_CLIENT_ID = id;
     cfg.VITO_CLIENT_SECRET = sec;
-    if (!writeEngineConfig(cfg)) {
-      st.textContent = "저장 실패 — 엔진 폴더 쓰기 권한을 확인해 주세요";
-      st.className = "err";
-      return;
-    }
+    if (!writeEngineConfig(cfg)) { setStatus("저장 실패 — 엔진 폴더 쓰기 권한을 확인해 주세요", "err"); return; }
     loadVitoUi();
-    st.textContent = "저장됨 (" + maskId(id) + ") — 전사 모델에서 VITO를 선택할 수 있어요";
-    st.className = "ok";
+    setStatus("VITO 키 저장됨 (" + maskId(id) + ")", "ok");
   }
 
   $("btn-save-vito").addEventListener("click", saveVitoKeys);
@@ -2100,7 +2083,7 @@
       return;
     }
 
-    if (current !== "screen-editor" || mode !== "nav" || inField || !cues.length) return;
+    if (current !== "screen-editor" || mode !== "nav" || inField || !cues.length || run.running) return;
 
     switch (e.code) {
       case "KeyA": e.preventDefault(); moveWord(-1); break;
@@ -2436,7 +2419,17 @@
     var combined = [];
     try {
       var prev = JSON.parse(fsN.readFileSync(outdir + "/extra_cuts.json", "utf8"));
-      if (prev && prev.length) combined = prev.slice();
+      if (prev && prev.length) {
+        combined = prev.filter(function (item) {
+          // keep(강제 보존) 항목이 사용자 삭제 표시와 겹치면 제거 — 사용자 의도가 우선
+          if (item.length > 3 && String(item[3]).toLowerCase() === "keep") {
+            for (var g = 0; g < r.orig.length; g++) {
+              if (item[0] < r.orig[g][1] && r.orig[g][0] < item[1]) return false;
+            }
+          }
+          return true;
+        });
+      }
     } catch (e) {}
     r.orig.forEach(function (g) { combined.push([g[0], g[1], "패널 삭제 표시"]); });
     var cutsFile = outdir + "/bangcut_cuts.json";
@@ -2463,8 +2456,13 @@
     var btn = $("btn-apply");
     btn.disabled = true;
     btn.textContent = "삭제 반영 중…";
-    setStatus("삭제 " + r.orig.length + "구간 반영 — 컷 재생성 중 (약 1분, 토큰 미사용)…");
     run.running = true;
+    $("apply-overlay").classList.add("open");
+    var aoStart = Date.now();
+    var aoTimer = setInterval(function () {
+      var s = Math.floor((Date.now() - aoStart) / 1000);
+      $("ao-time").textContent = (s < 600 ? ("0" + Math.floor(s / 60)).slice(-2) : Math.floor(s / 60)) + ":" + ("0" + (s % 60)).slice(-2);
+    }, 1000);
 
     var args = [root + "/edit.sh", video, "--extra-cuts", cutsFile];
     if (settings.resolution === "FHD") args.push("--fhd");
@@ -2482,17 +2480,38 @@
       run.proc = null;
       btn.disabled = false;
       btn.textContent = "시퀀스에 적용";
-      if (!ok) { setStatus(msg || "컷 재생성 실패", "err"); return; }
+      clearInterval(aoTimer);
+      if (!ok) {
+        $("apply-overlay").classList.remove("open");
+        setStatus(msg || "컷 재생성 실패", "err");
+        return;
+      }
       var fs2 = cepFs();
       fs2.writeFile(srtFile, C.serializeSrt(newCues), window.cep.encoding.UTF8);
-      var xml = outdir + "/" + base + "_cut.xml";
-      evalScript("bangOpenCutResult(" + JSON.stringify(xml) + "," + JSON.stringify(srtFile) + ")",
+      // 같은 경로 재임포트는 프리미어가 무시할 수 있음 → 고유 이름 사본으로 임포트해 새 시퀀스 보장
+      var d = new Date();
+      var stamp = ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2);
+      var xmlCopy = outdir + "/" + base + "_cut_" + stamp + ".xml";
+      try { nodeReq("fs").copyFileSync(outdir + "/" + base + "_cut.xml", xmlCopy); }
+      catch (e) { xmlCopy = outdir + "/" + base + "_cut.xml"; }
+      evalScript("bangOpenCutResult(" + JSON.stringify(xmlCopy) + "," + JSON.stringify(srtFile) + ")",
         function (res2) {
           res2 = String(res2 || "");
-          setStatus(res2.indexOf("OK") === 0
-            ? "삭제 반영 완료 — 새 러프컷이 타임라인에 열렸습니다"
-            : res2.replace(/^ERR:?/, "임포트 실패: "), res2.indexOf("OK") === 0 ? "ok" : "err");
-          loadFile(srtFile);
+          if (res2.indexOf("OK") !== 0) {
+            $("apply-overlay").classList.remove("open");
+            setStatus(res2.replace(/^ERR:?/, "임포트 실패: "), "err");
+            return;
+          }
+          // 새 시퀀스에 캡션 트랙까지 삽입
+          evalScript("bangApplySrt(" + JSON.stringify(srtFile) + ")", function (res3) {
+            $("apply-overlay").classList.remove("open");
+            res3 = String(res3 || "");
+            setStatus(res3.indexOf("OK") === 0
+              ? "삭제 반영 완료 — 새 러프컷과 자막이 타임라인에 적용됐습니다"
+              : "새 러프컷은 열렸지만 캡션 삽입 실패: " + res3.replace(/^ERR:?/, ""),
+              res3.indexOf("OK") === 0 ? "ok" : "err");
+            loadFile(srtFile);
+          });
         });
     }
     child.on("error", function (e) { doneCuts(false, "엔진 실행 오류: " + e.message); });
