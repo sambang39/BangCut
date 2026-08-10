@@ -395,6 +395,14 @@
   }
   .row .flow .w:hover { background: rgba(63,169,245,0.18); }
   .row .flow .w.pt { background: var(--accent); color: #fff; }
+  .row .flow .w.del {
+    color: var(--warn);
+    text-decoration: line-through;
+    background: rgba(224,108,92,0.12);
+  }
+  .row .flow .w.pt.del { background: var(--warn); color: #fff; }
+  .row.ldel .flow, .row.ldel .meta { opacity: 0.42; }
+  .row.ldel .flow { text-decoration: line-through; text-decoration-color: var(--warn); }
   .row .flow .w.hit { background: rgba(63,169,245,0.22); color: var(--accent-bright); }
   .row .flow .w.pt.hit { background: var(--accent); color: #fff; }
   .row.too-long .flow { box-shadow: inset 2px 0 0 rgba(224,108,92,0.55); padding-left: 6px; }

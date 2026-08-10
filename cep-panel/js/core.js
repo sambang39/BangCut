@@ -111,7 +111,15 @@
     this.redoStack = [];
   }
   History.prototype.snapshot = function (cues) {
-    return cues.map(function (c) { return { start: c.start, end: c.end, text: c.text }; });
+    return cues.map(function (c) {
+      return {
+        start: c.start, end: c.end, text: c.text,
+        atext: c.atext != null ? c.atext : null,
+        ldel: !!c.ldel,
+        anchors: (c.anchors || []).slice(),
+        marks: (c.marks || []).slice()
+      };
+    });
   };
   History.prototype.push = function (cues) {
     this.undoStack.push(this.snapshot(cues));
@@ -158,10 +166,68 @@
     return cue.start + (cue.end - cue.start) * ratio;
   }
 
+  // ---------- 단어 앵커 (Q) ----------
+
+  // 구두점 무시 단어 비교용 정규화
+  function normWord(s) {
+    return String(s).replace(/[.,!?…~"'()\[\]]/g, "");
+  }
+
+  // 이전 토큰들의 앵커를 새 토큰 배열에 재정렬 (그리디 텍스트 매칭, lookahead 3)
+  function realignAnchors(oldToks, oldAnchors, oldMarks, newToks) {
+    var A = [], M = [];
+    var j = 0;
+    for (var i = 0; i < newToks.length; i++) {
+      var found = -1;
+      for (var l = j; l < Math.min(j + 3, oldToks.length); l++) {
+        if (normWord(oldToks[l].t) === normWord(newToks[i].t)) { found = l; break; }
+      }
+      if (found >= 0) {
+        A.push(oldAnchors[found] || null);
+        M.push(!!(oldMarks && oldMarks[found]));
+        j = found + 1;
+      } else {
+        A.push(null);
+        M.push(false);
+      }
+    }
+    return { anchors: A, marks: M };
+  }
+
+  // 겹치는 구간 병합 ([ [s,e], ... ] 정렬+병합)
+  function mergeRanges(ranges) {
+    var rs = ranges.slice().sort(function (a, b) { return a[0] - b[0]; });
+    var out = [];
+    for (var i = 0; i < rs.length; i++) {
+      var r = rs[i];
+      if (out.length && r[0] <= out[out.length - 1][1] + 0.001) {
+        out[out.length - 1][1] = Math.max(out[out.length - 1][1], r[1]);
+      } else {
+        out.push([r[0], r[1]]);
+      }
+    }
+    return out;
+  }
+
+  // 제거 구간(병합·정렬됨)을 뺀 새 타임라인에서의 시각
+  function remapTime(t, removed) {
+    var cut = 0;
+    for (var i = 0; i < removed.length; i++) {
+      var s = removed[i][0], e = removed[i][1];
+      if (s >= t) break;
+      cut += Math.min(e, t) - s;
+    }
+    return Math.max(0, t - cut);
+  }
+
   var api = {
     MAX_LINE: MAX_LINE,
     tokenize: tokenize,
     wordTime: wordTime,
+    normWord: normWord,
+    realignAnchors: realignAnchors,
+    mergeRanges: mergeRanges,
+    remapTime: remapTime,
     parseSrt: parseSrt,
     serializeSrt: serializeSrt,
     srtTime: srtTime,

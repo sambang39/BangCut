@@ -47,6 +47,7 @@
       { keyCode: 123, metaKey: true }, { keyCode: 124, metaKey: true },
       { keyCode: 0 }, { keyCode: 1 }, { keyCode: 2 }, { keyCode: 13 },
       { keyCode: 36 }, { keyCode: 51 }, { keyCode: 117 },
+      { keyCode: 6 }, { keyCode: 7 },
       { keyCode: 6, metaKey: true },
       { keyCode: 6, metaKey: true, shiftKey: true },
       { keyCode: 3, metaKey: true },
@@ -206,8 +207,14 @@
     for (var i = 0; i < cues.length; i++) {
       if (C.maxLineLen(cues[i].text) > C.MAX_LINE) over++;
     }
+    var delN = 0;
+    for (var d = 0; d < cues.length; d++) {
+      if (cues[d].ldel) delN++;
+      else if (cues[d].marks) for (var w = 0; w < cues[d].marks.length; w++) if (cues[d].marks[w]) delN++;
+    }
     $summary.textContent = (dirty ? "수정됨 · " : "") + "자막 " + cues.length + "개" +
-      (over ? " · " + C.MAX_LINE + "자 초과 " + over + "개" : "");
+      (over ? " · " + C.MAX_LINE + "자 초과 " + over + "개" : "") +
+      (delN ? " · 삭제 표시 " + delN + "개" : "");
   }
 
   // ============ 시퀀스 정보 / SRT 감지 ============
@@ -1486,6 +1493,90 @@
   $("btn-run-cut").addEventListener("click", runCut);
   $("btn-stop-cut").addEventListener("click", stopCut);
 
+  // ============ 단어 앵커 (Q2) ============
+
+  function ensureCueMeta(c) {
+    if (!c.anchors) { c.anchors = []; c.marks = []; c.atext = null; c.ldel = false; }
+  }
+
+  // 텍스트가 바뀌었으면 앵커·마크를 현재 토큰에 재정렬
+  function syncAnchors(i) {
+    var c = cues[i];
+    ensureCueMeta(c);
+    if (c.atext === c.text) return;
+    var oldT = c.atext != null ? C.tokenize(c.atext) : [];
+    var r = C.realignAnchors(oldT, c.anchors, c.marks, C.tokenize(c.text));
+    c.anchors = r.anchors;
+    c.marks = r.marks;
+    c.atext = c.text;
+  }
+
+  function anchorFileFor(path) {
+    var dir = path.replace(/\/[^\/]+$/, "");
+    var base = path.split("/").pop().replace(/(_cut)?(_edit)?\.srt$/i, "");
+    return dir + "/" + base + "_cut_words.json";
+  }
+
+  function mkA(w) { return { cs: w[0], ce: w[1], os: w[3], oe: w[4] }; }
+
+  // 로드 시: 실측 단어 파일을 큐 토큰에 부착
+  function attachAnchors(awPath) {
+    var fs = cepFs();
+    if (!fs) return 0;
+    var r = fs.readFile(awPath, window.cep.encoding.UTF8);
+    if (r.err !== 0) return 0;
+    var aw;
+    try { aw = JSON.parse(r.data); } catch (e) { return 0; }
+    if (!aw || !aw.length) return 0;
+    var attached = 0;
+    cues.forEach(function (c) {
+      ensureCueMeta(c);
+      var toks = C.tokenize(c.text);
+      var cand = [];
+      for (var k = 0; k < aw.length; k++) {
+        var mid = (aw[k][0] + aw[k][1]) / 2;
+        if (mid >= c.start - 0.06 && mid < c.end + 0.06) cand.push(aw[k]);
+      }
+      var A = [], M = [];
+      if (cand.length === toks.length) {
+        for (var t = 0; t < toks.length; t++) A.push(mkA(cand[t]));
+      } else {
+        var j = 0;
+        for (var t2 = 0; t2 < toks.length; t2++) {
+          var f = -1;
+          for (var l = j; l < Math.min(j + 3, cand.length); l++) {
+            if (C.normWord(cand[l][2]) === C.normWord(toks[t2].t)) { f = l; break; }
+          }
+          if (f >= 0) { A.push(mkA(cand[f])); j = f + 1; } else A.push(null);
+        }
+      }
+      for (var m = 0; m < toks.length; m++) M.push(false);
+      attached += A.filter(Boolean).length;
+      c.anchors = A;
+      c.marks = M;
+      c.atext = c.text;
+      c.ldel = false;
+    });
+    return attached;
+  }
+
+  // 실측 앵커 우선 단어 시간 (없으면 이웃 앵커 보간 → 글자수 비례 폴백)
+  function anchoredWordTime(ci, wi) {
+    syncAnchors(ci);
+    var c = cues[ci];
+    var a = c.anchors[wi];
+    if (a) return a.cs;
+    var toks = C.tokenize(c.text);
+    var p = wi - 1, n = wi + 1;
+    while (p >= 0 && !c.anchors[p]) p--;
+    while (n < toks.length && !c.anchors[n]) n++;
+    if (p >= 0 && n < toks.length && toks[n].s > toks[p].s) {
+      var ratio = (toks[wi].s - toks[p].s) / (toks[n].s - toks[p].s);
+      return c.anchors[p].cs + (c.anchors[n].cs - c.anchors[p].cs) * ratio;
+    }
+    return C.wordTime(c, toks, wi);
+  }
+
   // ============ 자막 편집: 렌더 (단어 플로우) ============
 
   function tcOf(sec) { return C.secondsToTimecode(sec, seqInfo.fps); }
@@ -1524,8 +1615,9 @@
   }
 
   function buildRow(c, i) {
+    syncAnchors(i);
     var row = document.createElement("div");
-    row.className = "row" + (i === pointer.cue ? " selected" : "");
+    row.className = "row" + (i === pointer.cue ? " selected" : "") + (c.ldel ? " ldel" : "");
     row.dataset.idx = i;
     var over = C.maxLineLen(c.text) > C.MAX_LINE;
     if (over) row.classList.add("too-long");
@@ -1557,7 +1649,8 @@
     toks.forEach(function (tk, wi) {
       if (tk.s > last) appendWs(flow, c.text.slice(last, tk.s));
       var sp = document.createElement("span");
-      sp.className = "w" + (i === pointer.cue && wi === pointer.word ? " pt" : "");
+      sp.className = "w" + (i === pointer.cue && wi === pointer.word ? " pt" : "") +
+        (c.marks && c.marks[wi] ? " del" : "");
       sp.textContent = tk.t;
       sp.dataset.wi = wi;
       sp.addEventListener("click", function (e) {
@@ -1636,7 +1729,7 @@
       if (sp) sp.classList.add("pt");
       if (opts.scroll !== false) row.scrollIntoView({ block: "nearest" });
     }
-    if (!opts.noSync) syncPlayhead(C.wordTime(cues[ci], toks, wi));
+    if (!opts.noSync) syncPlayhead(anchoredWordTime(ci, wi));
   }
 
   function moveWord(delta) {
@@ -1706,15 +1799,29 @@
       mode = "nav";
       var nv = inp.value.replace(/\s+/g, " ").trim();
       if (!cancel && nv !== tk.t) {
+        syncAnchors(i);
         pushHistory();
-        var t = cues[i].text;
+        var c2 = cues[i];
+        var t = c2.text;
         var newText;
+        var nToks = nv ? nv.split(" ").length : 0;
         if (nv) {
           newText = t.slice(0, tk.s) + nv + t.slice(tk.e);
+          // 단어 수 유지되면 앵커 그대로(글자만 교정), 늘면 첫 단어만 앵커 유지
+          if (nToks > 1) {
+            var ins = [c2.anchors[wi]];
+            var insM = [c2.marks[wi]];
+            for (var x = 1; x < nToks; x++) { ins.push(null); insM.push(false); }
+            c2.anchors = c2.anchors.slice(0, wi).concat(ins, c2.anchors.slice(wi + 1));
+            c2.marks = c2.marks.slice(0, wi).concat(insM, c2.marks.slice(wi + 1));
+          }
         } else {
           newText = (t.slice(0, tk.s) + t.slice(tk.e)).replace(/ {2,}/g, " ").replace(/^ +| +$/g, "");
+          c2.anchors = c2.anchors.slice(0, wi).concat(c2.anchors.slice(wi + 1));
+          c2.marks = c2.marks.slice(0, wi).concat(c2.marks.slice(wi + 1));
         }
-        cues[i].text = newText;
+        c2.text = newText;
+        c2.atext = newText;
         dirty = true;
       }
       renderRow(i);
@@ -1823,8 +1930,13 @@
 
   function wordAt(ci, t) {
     var c = cues[ci];
+    syncAnchors(ci);
     var toks = tokensOf(ci);
     if (!toks.length) return 0;
+    for (var w = 0; w < toks.length; w++) {
+      var a = c.anchors[w];
+      if (a && t >= a.cs && t < a.ce) return w;
+    }
     var dur = Math.max(0.001, c.end - c.start);
     var charPos = Math.max(0, Math.min(1, (t - c.start) / dur)) * c.text.length;
     for (var w = 0; w < toks.length; w++) {
@@ -1867,7 +1979,14 @@
 
   function restore(snapshot) {
     if (!snapshot) return;
-    cues = snapshot.map(function (c) { return { start: c.start, end: c.end, text: c.text }; });
+    cues = snapshot.map(function (c) {
+      return {
+        start: c.start, end: c.end, text: c.text,
+        atext: c.atext, ldel: !!c.ldel,
+        anchors: (c.anchors || []).slice(),
+        marks: (c.marks || []).slice()
+      };
+    });
     dirty = true;
     if (pointer.cue >= cues.length) pointer.cue = cues.length - 1;
     render();
@@ -1893,27 +2012,53 @@
 
   function splitCue(i, pos) {
     var c = cues[i];
+    syncAnchors(i);
     var a = c.text.slice(0, pos).replace(/\s+$/, "");
     var b = c.text.slice(pos).replace(/^\s+/, "");
     if (!a || !b) { renderRow(i); return; }
     pushHistory();
-    var dur = c.end - c.start;
-    var ratio = a.length / (a.length + b.length);
-    var mid = c.start + Math.max(0.2, Math.min(dur - 0.2, dur * ratio));
-    cues.splice(i + 1, 0, { start: mid, end: c.end, text: b });
-    c.end = mid;
+    var toks = C.tokenize(c.text);
+    var k = 0;
+    while (k < toks.length && toks[k].e <= pos) k++;
+    // 실측 앵커 경계에서 나누기 (드리프트 방지) — 없으면 글자수 비례 폴백
+    var aEnd = null, bStart = null;
+    for (var p = k - 1; p >= 0; p--) if (c.anchors[p]) { aEnd = c.anchors[p].ce; break; }
+    for (var n = k; n < toks.length; n++) if (c.anchors[n]) { bStart = c.anchors[n].cs; break; }
+    var tA, tB;
+    if (aEnd != null && bStart != null && bStart >= aEnd - 0.001) {
+      tA = aEnd; tB = bStart;
+    } else {
+      var dur = c.end - c.start;
+      var ratio = a.length / (a.length + b.length);
+      tA = tB = c.start + Math.max(0.2, Math.min(dur - 0.2, dur * ratio));
+    }
+    var second = {
+      start: Math.min(tB, c.end), end: c.end, text: b, atext: b,
+      anchors: c.anchors.slice(k), marks: c.marks.slice(k), ldel: c.ldel
+    };
+    c.end = Math.max(c.start + 0.1, tA);
     c.text = a;
+    c.atext = a;
+    c.anchors = c.anchors.slice(0, k);
+    c.marks = c.marks.slice(0, k);
+    cues.splice(i + 1, 0, second);
     dirty = true;
     render(i + 1, 0);
   }
 
   function mergeUp(i) {
     if (i <= 0 || i >= cues.length) return;
+    syncAnchors(i - 1);
+    syncAnchors(i);
     pushHistory();
     var prev = cues[i - 1];
     var cur = cues[i];
     var joinWord = C.tokenize(prev.text).length; // 병합 지점 단어 인덱스
     prev.text = (prev.text.replace(/\s+$/, "") + " " + cur.text.replace(/^\s+/, "")).trim();
+    prev.atext = prev.text;
+    prev.anchors = prev.anchors.concat(cur.anchors);
+    prev.marks = prev.marks.concat(cur.marks);
+    prev.ldel = prev.ldel && cur.ldel;
     prev.end = cur.end;
     cues.splice(i, 1);
     dirty = true;
@@ -1967,6 +2112,14 @@
         e.preventDefault();
         splitAtPointer();
         break;
+      case "KeyZ":
+        e.preventDefault();
+        if (pointer.cue >= 0) toggleWordMark(pointer.cue, pointer.word);
+        break;
+      case "KeyX":
+        e.preventDefault();
+        if (pointer.cue >= 0) toggleLineMark(pointer.cue);
+        break;
       case "Backspace":
         e.preventDefault();
         if (pointer.cue > 0) mergeUp(pointer.cue);
@@ -1977,6 +2130,33 @@
         break;
     }
   });
+
+  // ============ 삭제 마킹 (Q3) ============
+
+  function toggleWordMark(ci, wi) {
+    syncAnchors(ci);
+    var c = cues[ci];
+    if (wi >= c.marks.length) return;
+    if (!c.marks[wi] && !c.anchors[wi]) {
+      setStatus("새로 입력된 단어라 실측 시간이 없습니다 — 삭제 시 추정 구간으로 잘립니다", "err");
+    }
+    pushHistory();
+    c.marks[wi] = !c.marks[wi];
+    dirty = true;
+    renderRow(ci);
+    setPointer(ci, wi, { scroll: false, noSync: true });
+    updateSummary();
+  }
+
+  function toggleLineMark(ci) {
+    syncAnchors(ci);
+    pushHistory();
+    cues[ci].ldel = !cues[ci].ldel;
+    dirty = true;
+    renderRow(ci);
+    setPointer(ci, pointer.word, { scroll: false, noSync: true });
+    updateSummary();
+  }
 
   // ============ 검색/바꾸기 드로어 (E) ============
 
@@ -2169,6 +2349,8 @@
     cues = parsed;
     srtPath = path;
     dirty = false;
+    var anchored = attachAnchors(anchorFileFor(path));
+    if (anchored) setStatus("단어 앵커 " + anchored + "개 연결됨 — 정밀 싱크·삭제 마킹 사용 가능", "ok");
     pointer = { cue: -1, word: 0 };
     history = new C.History(120);
     typingSquash = null;
@@ -2199,7 +2381,134 @@
     return out;
   }
 
+  // 마킹된 삭제 구간 수집 (원본/컷 타임라인 각각, 병합 정렬)
+  function collectMarkRanges() {
+    var orig = [], cut = [], skipped = 0;
+    for (var i = 0; i < cues.length; i++) {
+      var c = cues[i];
+      syncAnchors(i);
+      var anch = (c.anchors || []).filter(Boolean);
+      if (c.ldel) {
+        if (anch.length) {
+          orig.push([anch[0].os, anch[anch.length - 1].oe]);
+          cut.push([anch[0].cs, anch[anch.length - 1].ce]);
+        } else skipped++;
+      } else if (c.marks) {
+        for (var w = 0; w < c.marks.length; w++) {
+          if (!c.marks[w]) continue;
+          var a = c.anchors[w];
+          if (a) { orig.push([a.os, a.oe]); cut.push([a.cs, a.ce]); }
+          else skipped++;
+        }
+      }
+    }
+    return { orig: C.mergeRanges(orig), cut: C.mergeRanges(cut), skipped: skipped };
+  }
+
+  function videoForSrt(path) {
+    // <영상폴더>/BangCut/x_cut.srt → <영상폴더>/x.<ext>
+    var outdir = path.replace(/\/[^\/]+$/, "");
+    var parent = outdir.replace(/\/[^\/]+$/, "");
+    var base = path.split("/").pop().replace(/(_cut)?(_edit)?\.srt$/i, "");
+    var exts = [".MP4", ".mp4", ".mov", ".MOV", ".m4v", ".mkv", ".mts", ".mxf"];
+    for (var i = 0; i < exts.length; i++) {
+      if (statOk(parent + "/" + base + exts[i])) return parent + "/" + base + exts[i];
+    }
+    return null;
+  }
+
+  // 마킹 삭제 반영: extra_cuts 병합 → 로컬 엔진 재실행(클로드·토큰 불필요) → 결과 임포트
+  function applyWithCuts(r) {
+    if (run.running) { setStatus("컷편집 실행 중에는 반영할 수 없습니다", "err"); return; }
+    var cp = nodeReq("child_process");
+    var fsN = nodeReq("fs");
+    var root = repoRoot();
+    if (!cp || !fsN || !root || !statOk(root + "/edit.sh")) {
+      setStatus("엔진을 찾지 못했습니다", "err");
+      return;
+    }
+    var video = videoForSrt(srtPath);
+    if (!video) { setStatus("원본 영상을 찾지 못했습니다 (SRT 폴더 상위에 있어야 함)", "err"); return; }
+    var outdir = srtPath.replace(/\/[^\/]+$/, "");
+    var base = srtPath.split("/").pop().replace(/(_cut)?(_edit)?\.srt$/i, "");
+
+    // 기존 추가컷(반복 테이크 등)과 병합해 손실 방지
+    var combined = [];
+    try {
+      var prev = JSON.parse(fsN.readFileSync(outdir + "/extra_cuts.json", "utf8"));
+      if (prev && prev.length) combined = prev.slice();
+    } catch (e) {}
+    r.orig.forEach(function (g) { combined.push([g[0], g[1], "패널 삭제 표시"]); });
+    var cutsFile = outdir + "/bangcut_cuts.json";
+    fsN.writeFileSync(cutsFile, JSON.stringify(combined));
+
+    // 사용자 텍스트 보존 SRT: 마킹 단어 제거 + 시간 리맵 (엔진 재생성 자막 대신 사용)
+    var newCues = [];
+    for (var i = 0; i < cues.length; i++) {
+      var c = cues[i];
+      if (c.ldel) continue;
+      syncAnchors(i);
+      var toks = C.tokenize(c.text);
+      var kept = [];
+      for (var w = 0; w < toks.length; w++) if (!c.marks[w]) kept.push(toks[w].t);
+      var text = kept.join(" ").trim();
+      if (!text) continue;
+      var ns = C.remapTime(c.start, r.cut);
+      var ne = C.remapTime(c.end, r.cut);
+      if (ne - ns < 0.15) continue;
+      newCues.push({ start: ns, end: ne, text: text });
+    }
+    var srtFile = outdir + "/" + base + "_cut_edit.srt";
+
+    var btn = $("btn-apply");
+    btn.disabled = true;
+    btn.textContent = "삭제 반영 중…";
+    setStatus("삭제 " + r.orig.length + "구간 반영 — 컷 재생성 중 (약 1분, 토큰 미사용)…");
+    run.running = true;
+
+    var args = [root + "/edit.sh", video, "--extra-cuts", cutsFile];
+    if (settings.resolution === "FHD") args.push("--fhd");
+    var child = cp.spawn("/bin/bash", args,
+      { cwd: root, env: extendedEnv(), stdio: ["ignore", "pipe", "pipe"] });
+    run.proc = child;
+    child.stdout.on("data", function (d) {
+      String(d).split("\n").forEach(function (l) { if (l.trim()) logLine(l.trim()); });
+    });
+    child.stderr.on("data", function (d) {
+      String(d).split("\n").forEach(function (l) { if (l.trim()) logLine("! " + l.trim()); });
+    });
+    function doneCuts(ok, msg) {
+      run.running = false;
+      run.proc = null;
+      btn.disabled = false;
+      btn.textContent = "시퀀스에 적용";
+      if (!ok) { setStatus(msg || "컷 재생성 실패", "err"); return; }
+      var fs2 = cepFs();
+      fs2.writeFile(srtFile, C.serializeSrt(newCues), window.cep.encoding.UTF8);
+      var xml = outdir + "/" + base + "_cut.xml";
+      evalScript("bangOpenCutResult(" + JSON.stringify(xml) + "," + JSON.stringify(srtFile) + ")",
+        function (res2) {
+          res2 = String(res2 || "");
+          setStatus(res2.indexOf("OK") === 0
+            ? "삭제 반영 완료 — 새 러프컷이 타임라인에 열렸습니다"
+            : res2.replace(/^ERR:?/, "임포트 실패: "), res2.indexOf("OK") === 0 ? "ok" : "err");
+          loadFile(srtFile);
+        });
+    }
+    child.on("error", function (e) { doneCuts(false, "엔진 실행 오류: " + e.message); });
+    child.on("close", function (code) {
+      doneCuts(code === 0, code === 0 ? "" : "엔진 종료 코드 " + code + " — 다시 시도해 주세요");
+    });
+  }
+
   function applyToSequence() {
+    var r = collectMarkRanges();
+    if (r.skipped) setStatus("실측 시간이 없는 삭제 표시 " + r.skipped + "개는 건너뜁니다", "err");
+    if (r.orig.length) {
+      if (!saveSrt()) return;
+      applyWithCuts(r);
+      return;
+    }
     var out = saveSrt();
     if (!out) return;
     setStatus("시퀀스에 적용 중…");
@@ -2318,6 +2627,19 @@
   });
 
   // ============ 초기화 ============
+
+  // 개발 디버그 훅 (내부 상태 점검용)
+  window.__bangDebug = function () {
+    return {
+      cueCount: cues.length,
+      srtPath: srtPath,
+      anchorFile: srtPath ? anchorFileFor(srtPath) : null,
+      cue0: cues[0] ? {
+        start: cues[0].start, end: cues[0].end, text: cues[0].text,
+        anchors: (cues[0].anchors || []).map(function (a) { return a ? a.cs : null; })
+      } : null
+    };
+  };
 
   registerKeys();
   loadSettings();

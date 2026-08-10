@@ -835,6 +835,22 @@ def main():
     lines = regroup(sub_words, mapper, cut_points=cut_points)
     write_srt(lines, srt_out)
 
+    # 단어 앵커 파일 (BangCut 패널용): [컷타임s, 컷타임e, 단어, 원본s, 원본e]
+    # 패널이 자막 편집·삭제 마킹 시 실측 단어 시간을 쓰기 위한 데이터.
+    try:
+        _cw = []
+        for _ws, _we, _wt in sub_words:
+            _m0, _m1 = mapper(_ws), mapper(_we)
+            if _m0 is None or _m1 is None or _m1 <= _m0:
+                continue  # 컷에 걸쳐 잘린 단어는 앵커 제외(패널은 보간 폴백)
+            _cw.append([round(_m0, 3), round(_m1, 3), _wt,
+                        round(_ws, 3), round(_we, 3)])
+        json.dump(_cw, open(os.path.join(outdir, base + "_cut_words.json"), "w",
+                            encoding="utf-8"), ensure_ascii=False)
+        print(f"   앵커   : {os.path.basename(base + '_cut_words.json')}  ({len(_cw)}단어)")
+    except Exception as _e_cw:
+        print(f"   [주의] 단어 앵커 파일 생성 실패: {_e_cw}")
+
     # 자막 마감(한 줄 30자) + .vtt/.ass(빵 스타일) 한 번에
     sub_extra = ""
     if CFG.get("POLISH_SUBTITLES"):
