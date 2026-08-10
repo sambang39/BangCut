@@ -1527,6 +1527,8 @@
   function mkA(w) { return { cs: w[0], ce: w[1], os: w[3], oe: w[4] }; }
 
   // 로드 시: 실측 단어 파일을 큐 토큰에 부착
+  var anchorRaw = null; // 현재 컷의 실측 단어 목록 (마이그레이션 매칭용)
+
   function attachAnchors(awPath) {
     var fs = cepFs();
     if (!fs) return 0;
@@ -1535,6 +1537,7 @@
     var aw;
     try { aw = JSON.parse(r.data); } catch (e) { return 0; }
     if (!aw || !aw.length) return 0;
+    anchorRaw = aw;
     var attached = 0;
     cues.forEach(function (c) {
       ensureCueMeta(c);
@@ -2358,6 +2361,7 @@
     cues = parsed;
     srtPath = path;
     dirty = false;
+    anchorRaw = null;
     var anchored = attachAnchors(anchorFileFor(path));
     if (anchored) setStatus("단어 앵커 " + anchored + "개 연결됨 — 정밀 싱크·삭제 마킹 사용 가능", "ok");
     pointer = { cue: -1, word: 0 };
@@ -2369,6 +2373,7 @@
     $("editor-file").title = path;
     showScreen("screen-editor");
     render(0, 0);
+    setTimeout(maybeOfferMigration, 300);
   }
 
   function editPath() {
@@ -2387,6 +2392,7 @@
     dirty = false;
     updateSummary();
     rememberProjSrt(out);
+    saveEditMeta(out);
     setStatus("저장됨: " + out.split("/").pop(), "ok");
     return out;
   }
@@ -2671,6 +2677,114 @@
         });
       });
   }
+
+  // 편집 메타 사이드카: 자막 나눔·수정을 원본 시간 앵커와 함께 보존 → 재컷편집 후 이어서 적용
+  function saveEditMeta(srtOut) {
+    var fsN = nodeReq("fs");
+    if (!fsN) return;
+    srtOut = editMetaPathFor(srtPath).replace(/\.meta\.json$/, ""); // 영상별 고정 경로
+    var meta = [];
+    for (var i = 0; i < cues.length; i++) {
+      syncAnchors(i);
+      var c = cues[i];
+      meta.push({
+        text: c.text,
+        anchors: (c.anchors || []).map(function (a) { return a ? { os: a.os, oe: a.oe } : null; })
+      });
+    }
+    try { fsN.writeFileSync(srtOut + ".meta.json", JSON.stringify(meta)); } catch (e) {}
+  }
+
+  function editMetaPathFor(srtLoaded) {
+    var outdir = srtLoaded.replace(/\/[^\/]+$/, "");
+    var base = srtLoaded.split("/").pop().replace(/_cut(?:_\d+)?(?:_edit)?\.srt$/i, "").replace(/\.srt$/i, "");
+    return outdir + "/" + base + "_cut_edit.srt.meta.json";
+  }
+
+  // 이전 편집을 새 컷 타임라인으로 이관 (원본 시간으로 단어 매칭)
+  function applyMigration(meta) {
+    if (!anchorRaw || !anchorRaw.length) return 0;
+    // 원본 시작시간 → 새 컷 항목 인덱스 (0.06s 허용)
+    var byOs = anchorRaw.slice().sort(function (a, b) { return a[3] - b[3]; });
+    function findByOs(os) {
+      var lo = 0, hi = byOs.length - 1;
+      while (lo <= hi) {
+        var mid = (lo + hi) >> 1;
+        if (byOs[mid][3] < os - 0.06) lo = mid + 1;
+        else if (byOs[mid][3] > os + 0.06) hi = mid - 1;
+        else return byOs[mid];
+      }
+      return null;
+    }
+    var migrated = [], dropped = 0;
+    for (var i = 0; i < meta.length; i++) {
+      var mc = meta[i];
+      var toks = C.tokenize(mc.text);
+      var keepToks = [], A = [], first = null, last = null;
+      for (var w = 0; w < toks.length; w++) {
+        var a = mc.anchors && mc.anchors[w];
+        if (a) {
+          var hit = findByOs(a.os);
+          if (!hit) { dropped++; continue; } // 새 컷에서 잘려나간 단어
+          keepToks.push(toks[w].t);
+          A.push({ cs: hit[0], ce: hit[1], os: hit[3], oe: hit[4] });
+          if (first === null) first = hit[0];
+          last = hit[1];
+        } else {
+          keepToks.push(toks[w].t); // 사용자가 새로 넣은 단어 — 유지(보간)
+          A.push(null);
+        }
+      }
+      var text = keepToks.join(" ").trim();
+      if (!text || first === null) continue;
+      var cue = { start: first, end: last, text: text, atext: text, ldel: false,
+                  anchors: [], marks: [] };
+      // atext 토큰과 A 재정렬 (join으로 재토큰화된 순서와 동일)
+      var newToks = C.tokenize(text);
+      for (var k = 0; k < newToks.length; k++) {
+        cue.anchors.push(A[k] || null);
+        cue.marks.push(false);
+      }
+      migrated.push(cue);
+    }
+    if (!migrated.length) return 0;
+    migrated.sort(function (a, b) { return a.start - b.start; });
+    C.fillGapsCues(migrated);
+    cues = migrated;
+    history = new C.History(120);
+    dirty = true;
+    pointer = { cue: -1, word: 0 };
+    render(0, 0);
+    return dropped;
+  }
+
+  function maybeOfferMigration() {
+    var fsN = nodeReq("fs");
+    if (!fsN || !srtPath) return;
+    if (/_edit(_\d+)?\.srt$/i.test(srtPath)) return; // 편집본 자체를 연 경우는 제외
+    var metaPath = editMetaPathFor(srtPath);
+    var meta;
+    try { meta = JSON.parse(fsN.readFileSync(metaPath, "utf8")); } catch (e) { return; }
+    if (!meta || !meta.length || !anchorRaw) return;
+    $("migrate-msg").textContent = "이 영상에서 작업했던 자막 " + meta.length +
+      "개(나눔·수정 포함)가 있습니다. 새 컷에 맞춰 그대로 옮겨올까요?";
+    $("migrate-overlay").classList.add("open");
+    window.__pendingMigration = meta;
+  }
+
+  $("btn-migrate-yes").addEventListener("click", function () {
+    $("migrate-overlay").classList.remove("open");
+    var meta = window.__pendingMigration;
+    window.__pendingMigration = null;
+    if (!meta) return;
+    var dropped = applyMigration(meta);
+    setStatus("이전 편집 " + cues.length + "개 자막을 새 컷에 이어서 적용했습니다" +
+      (dropped ? " (잘린 단어 " + dropped + "개 제외)" : ""), "ok");
+  });
+  $("btn-migrate-no").addEventListener("click", function () {
+    $("migrate-overlay").classList.remove("open");
+    window.__pendingMigration = null;
+  });
 
   function applyToSequence() {
     var r = collectMarkRanges();

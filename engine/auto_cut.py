@@ -102,7 +102,8 @@ def extend_sibilant_starts(sil_keeps, words, base_lead, sib_lead, total):
 
 # 한국어 문장어미로 흔히 끝나는 끝음절 — 뒤에 트레일링 릴리스('-다'의 여린 꼬리 등)가 이어져
 # 잘리면 '입니드'처럼 뭉개진다. 이런 단어 뒤엔 tail 여유를 크게 준다.
-EOMI_END_SYLLABLES = set("다까요죠네지나라자데어아야봐함슴음죵께")
+# v3.1: 어미 보호를 종결어미 핵심으로 축소 — 광범위 집합이 "전체적으로 어미가 남는" 과보존 유발
+EOMI_END_SYLLABLES = set("다까요죠")
 
 
 def ends_with_eomi(tok):
