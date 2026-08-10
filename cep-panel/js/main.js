@@ -101,7 +101,11 @@
     }
     if (id === "screen-cutedit") refreshSeqInfo();
     if (id === "screen-editor") activateEditor();
-    if (id === "screen-settings") { loadVitoUi(); loadClaudeUi(); }
+    if (id === "screen-settings") {
+      loadVitoUi();
+      loadClaudeUi();
+      checkPrereq(setEnvBadge);
+    }
   }
 
   (function () {
@@ -668,14 +672,14 @@
     var has = !!(cfg.VITO_CLIENT_ID && cfg.VITO_CLIENT_SECRET);
     var badge = $("vito-head-badge");
     if (badge) {
-      badge.textContent = has ? "등록됨" : "미등록";
-      badge.className = "badge" + (has ? " ok" : "");
+      badge.textContent = has ? "활성화" : "비활성화";
+      badge.className = "badge " + (has ? "ok" : "warn");
     }
     $("set-vito-id").value = cfg.VITO_CLIENT_ID || "";
     $("set-vito-secret").value = "";
     $("set-vito-secret").placeholder = has ? "저장됨 — 변경할 때만 입력" : "발급받은 CLIENT_SECRET";
     var st = $("vito-status");
-    st.textContent = has ? "등록됨 (" + maskId(cfg.VITO_CLIENT_ID) + ") — VITO 사용 가능" : "";
+    st.textContent = has ? "활성화 (" + maskId(cfg.VITO_CLIENT_ID) + ") — VITO 사용 가능" : "";
     st.className = has ? "ok" : "";
   }
 
@@ -712,18 +716,35 @@
     var email = claudeAccount();
     var key = claudeApiKey();
     var badge = $("claude-head-badge");
-    badge.textContent = email ? "구독 로그인됨" : (key ? "API 키 사용 중" : "미연결");
-    badge.className = "badge" + ((email || key) ? " ok" : "");
-    $("claude-conn-desc").innerHTML =
-      (email
-        ? "구독 계정: <b>" + email + "</b> — 정액 요금으로 실행됩니다."
-        : (key ? "API 키(" + maskKey(key) + ")로 실행됩니다 — 사용량만큼 과금."
-               : "클로드와 연결되어 있지 않습니다.")) +
-      "<br><span style='color:var(--text-faint)'>로그인이 있으면 로그인을 사용하고, API 키는 로그인이 없을 때 사용됩니다.</span>";
+    badge.textContent = (email || key) ? "활성화" : "비활성화";
+    badge.className = "badge " + ((email || key) ? "ok" : "warn");
+    $("claude-conn-desc").innerHTML = email
+      ? "구독 계정: <b>" + email + "</b>"
+      : (key ? "API 키(<b>" + maskKey(key) + "</b>)로 실행됩니다 — 사용량만큼 과금"
+             : '<span class="bad">클로드와 연결되어 있지 않습니다</span>');
     $("set-claude-key").value = "";
     $("set-claude-key").placeholder = key ? "저장됨 (" + maskKey(key) + ") — 변경할 때만 입력" : "sk-ant-…";
     $("claude-key-status").textContent = "";
   }
+
+  // 로그인/로그아웃은 브라우저 OAuth가 필요해 터미널을 열어 진행
+  function openTerminalCmd(cmd) {
+    var cp = nodeReq("child_process");
+    if (!cp) return;
+    var osa = 'tell application "Terminal"\nactivate\ndo script "' + cmd.replace(/"/g, '\\"') + '"\nend tell';
+    try { cp.execFile("/usr/bin/osascript", ["-e", osa]); } catch (e) {}
+  }
+
+  $("btn-claude-login").addEventListener("click", function () {
+    openTerminalCmd((claudeBin() || "claude") + " /login");
+    $("claude-key-status").textContent = "터미널에서 로그인 진행 후, 카드를 다시 열면 반영됩니다";
+    $("claude-key-status").className = "";
+  });
+  $("btn-claude-logout").addEventListener("click", function () {
+    openTerminalCmd((claudeBin() || "claude") + " /logout");
+    $("claude-key-status").textContent = "터미널에서 로그아웃 진행 후, 카드를 다시 열면 반영됩니다";
+    $("claude-key-status").className = "";
+  });
 
   $("btn-save-claude-key").addEventListener("click", function () {
     var k = $("set-claude-key").value.trim();
@@ -734,6 +755,14 @@
     st.textContent = "저장됨 (" + maskKey(k) + ")";
     st.className = "ok";
   });
+
+  function setEnvBadge() {
+    var badge = $("env-head-badge");
+    if (!badge) return;
+    var ok = prereq.claude && prereq.repo && prereq.venv && prereq.ffmpeg;
+    badge.textContent = ok ? "정상" : "확인 필요";
+    badge.className = "badge " + (ok ? "ok" : "warn");
+  }
 
   function loadEnvInfo() {
     $("env-info").innerHTML = "확인 중…";
@@ -748,7 +777,11 @@
           : '<span class="bad">✗ 찾을 수 없음</span>') + "<br>" +
         "파이썬 환경(.venv): " + (prereq.venv
           ? '<span class="ok">✓ 준비됨</span>'
-          : '<span class="bad">✗ 미설치 — 온보딩 2단계를 진행해 주세요</span>');
+          : '<span class="bad">✗ 미설치 — 온보딩의 자동 설치를 진행해 주세요</span>') + "<br>" +
+        "ffmpeg: " + (prereq.ffmpeg
+          ? '<span class="ok">✓ 설치됨</span>'
+          : '<span class="bad">✗ 미설치 — brew install ffmpeg</span>');
+      setEnvBadge();
     });
   }
 
@@ -1036,6 +1069,22 @@
     document.body.removeChild(ta);
     return ok;
   }
+
+  // 비밀값 보기/가리기 토글 (VITO·Claude 키 공용)
+  (function () {
+    var eyes = document.querySelectorAll(".pw-wrap .eye");
+    for (var i = 0; i < eyes.length; i++) {
+      (function (b) {
+        b.addEventListener("click", function () {
+          var input = b.parentElement.querySelector("input");
+          var show = input.type === "password";
+          input.type = show ? "text" : "password";
+          b.querySelector(".eye-on").style.display = show ? "none" : "block";
+          b.querySelector(".eye-off").style.display = show ? "block" : "none";
+        });
+      })(eyes[i]);
+    }
+  })();
 
   (function () {
     var btns = document.querySelectorAll(".copybtn");
