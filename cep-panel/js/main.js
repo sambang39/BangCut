@@ -186,7 +186,7 @@
       // 잔여물 제거: 컷편집·자막 편집 모두 디폴트로
       showDropzone();
       cutStatus("", "");
-      $("prog-wrap").style.display = "none";
+      $("cut-overlay").classList.remove("open");
       editorDismissed = false;
       resetEditor();
       refreshSeqInfo();
@@ -1227,10 +1227,17 @@
   function setRunningUi(on) {
     $("btn-run-cut").disabled = on || !(source.path && source.imported);
     $("btn-run-cut").textContent = on ? "실행 중…" : "컷편집 시작";
-    $("btn-stop-cut").style.display = on ? "inline-block" : "none";
     $("cut-options").classList.toggle("off", on); // 실행 중 옵션 전체 잠금
-    if (on) $("prog-wrap").style.display = "block";
+    if (on) {
+      $("cut-overlay").classList.add("open");
+      $("btn-stop-cut").style.display = "block";
+      $("btn-co-close").style.display = "none";
+    }
   }
+
+  $("btn-co-close").addEventListener("click", function () {
+    $("cut-overlay").classList.remove("open");
+  });
 
   $("btn-log-toggle").addEventListener("click", function () {
     var el = $("run-log");
@@ -1247,7 +1254,7 @@
     if (gapMode === "manual") {
       L.push("- 무음 구간 설정: 사용자가 직접 지정 — config.json에 MIN_SILENCE/PAD_LEAD/PAD_TAIL로 반영돼 있음. --preset 옵션은 쓰지 말 것");
     } else {
-      L.push("- 무음 구간 설정: 자동 — engine/analyze_video.py로 영상을 측정해 보수/표준/공격 중 알맞은 프리셋을 스스로 판단해 --preset으로 지정");
+      L.push("- 무음 구간 설정: 자동 — engine/analyze_video.py를 실행하고 출력이 추천하는 프리셋을 그대로 --preset에 사용 (별도 고민·재분석 금지)");
     }
     if (settings.sttModel === "vito") {
       L.push("- 전사 모델: VITO — engine/stt_vito.py로 먼저 전사해 _words.json을 만든 뒤 edit.sh 실행 (키는 config.json)");
@@ -1265,6 +1272,8 @@
     L.push("결과 검수(과도한 컷·어미 잘림 확인) 후 성공이면 마지막 줄에 ###DONE, 실패면 ###FAIL:<한 줄 사유> 를 출력하라.");
     L.push("");
     L.push("절대 규칙: ###DONE 또는 ###FAIL을 출력하기 전에는 어떤 경우에도 응답을 끝내지 말라.");
+    L.push("효율 규칙: 엔진 소스 코드는 읽기 전용 — 수정·개선 시도 금지. 각 단계 보고는 마커+한 줄 요약만.");
+    L.push("검수는 *_cut_report.txt 확인과 산출물 존재 확인으로 끝내라 — 재실행·반복 검증 금지.");
     L.push("분석·전사·렌더가 수십 분 걸려도 백그라운드 출력을 계속 폴링하며 끝까지 기다려라.");
     L.push("'기다리는 중입니다', '분석이 끝나면 실행합니다' 같은 중간 보고로 턴을 마치는 것은 실패다.");
     L.push("최종 산출물(_cut.xml과 _cut.srt)이 결과 폴더에 실제로 존재하는 것을 ls로 확인한 뒤에만 ###DONE을 출력하라.");
@@ -1293,7 +1302,8 @@
       renderSteps();
       $("prog-title").textContent = "완료!";
       setPct(100);
-      cutStatus("컷편집 완료 — 결과를 프로젝트로 가져옵니다", "ok");
+      $("cut-overlay").classList.remove("open");
+      cutStatus("컷편집 완료 (" + $("prog-meta").textContent + ") — 결과를 프로젝트로 가져옵니다", "ok");
       // H6: XML+SRT를 BangCut 빈으로 임포트하고 컷 시퀀스를 타임라인에 연다
       var outdir = source.path.replace(/\/[^\/]+$/, "") + "/BangCut";
       var base = source.path.split("/").pop().replace(/\.[^.]+$/, "");
@@ -1329,9 +1339,11 @@
       }
     } else {
       $("prog-title").textContent = "중단됨";
-      cutStatus(msg || "실패 — '자세히 보기'에서 로그를 확인하세요", "err");
+      cutStatus(msg || "실패 — 로그를 확인하세요", "err");
       $("run-log").classList.add("open");
       $("btn-log-toggle").textContent = "간단히 보기";
+      $("btn-stop-cut").style.display = "none";
+      $("btn-co-close").style.display = "block";
     }
     if (msg) logLine((ok ? "== 완료: " : "== 실패: ") + msg);
   }
@@ -2021,7 +2033,9 @@
     for (var n = k; n < toks.length; n++) if (c.anchors[n]) { bStart = c.anchors[n].cs; break; }
     var tA, tB;
     if (aEnd != null && bStart != null && bStart >= aEnd - 0.001) {
-      tA = aEnd; tB = bStart;
+      // 단어 사이 소공백(<=1.2s)은 붙여서 나눔 — 캡션 빈틈 방지. 긴 정적만 남김
+      tA = (bStart - aEnd <= 1.2) ? bStart : aEnd;
+      tB = bStart;
     } else {
       var dur = c.end - c.start;
       var ratio = a.length / (a.length + b.length);
@@ -2367,6 +2381,7 @@
     var fs = cepFs();
     if (!fs) { setStatus("CEP 환경이 아닙니다", "err"); return null; }
     var out = editPath();
+    C.fillGapsCues(cues);
     var r = fs.writeFile(out, C.serializeSrt(cues), window.cep.encoding.UTF8);
     if (r.err !== 0) { setStatus("저장 실패 (err " + r.err + ")", "err"); return null; }
     dirty = false;
@@ -2620,6 +2635,7 @@
       if (ne - ns < 0.15) continue;
       newCues.push({ start: ns, end: ne, text: text });
     }
+    C.fillGapsCues(newCues);
 
     var d = new Date();
     var stamp = ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2);

@@ -220,7 +220,18 @@
     return Math.max(0, t - cut);
   }
 
+  // 연속 발화 자막 사이 공백 메움 (엔진 fill_gaps와 동일 규칙, in-place)
+  function fillGapsCues(cues, maxGap) {
+    var mg = maxGap == null ? 1.2 : maxGap;
+    for (var i = 0; i < cues.length - 1; i++) {
+      var gap = cues[i + 1].start - cues[i].end;
+      if (gap > 0 && gap <= mg) cues[i].end = cues[i + 1].start;
+    }
+    return cues;
+  }
+
   var api = {
+    fillGapsCues: fillGapsCues,
     MAX_LINE: MAX_LINE,
     tokenize: tokenize,
     wordTime: wordTime,
