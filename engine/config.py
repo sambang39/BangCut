@@ -122,7 +122,7 @@ DEFAULTS = {
     "SUBTITLE_MIN_CHARS": 12,  # 이보다 짧으면 다음과 묶음
     "SUBTITLE_IDEAL": 20,      # 균형 분할 목표 길이 — v3
     "SUBTITLE_KEEP_WHOLE": 28, # 이 길이까지의 한 문장은 자르지 않고 통째로 — v3(기계적 자르기 방지)
-    "SUBTITLE_GAP_FILL": 1.2,  # 연속 발화 자막 사이 공백 메움 한도(초) — v3
+    "SUBTITLE_GAP_FILL": 9999.0,  # 자막 빈 공간 금지 — 다음 자막 시작까지 무조건 연장 (컷 타임라인엔 의도된 정적이 없음)
     "SUBTITLE_IDEAL": 22,      # 균형 분할 목표 길이 (길이 균형보다 문법 경계 우선)
     "SUBTITLE_SNAP_CUT": 0.30, # 자막 전환을 컷 지점에 스냅하는 최대 거리(초)
     "SUBTITLE_NO_PERIOD": True, # 자막에서 마침표(.) 제거 — ?·!·소수점(35.8%)은 유지

@@ -292,7 +292,7 @@ def map_words(words, mapper):
 
 IDEAL_CHARS = 20      # 균형 분할 목표 길이 (config로 주입) — v3: 20자 안팎
 SNAP_CUT    = 0.30    # 자막 전환을 컷 지점에 스냅하는 최대 거리(초)
-GAP_FILL    = 1.2     # 연속 발화 구간에서 자막 사이 공백을 메우는 한도(초) — v3
+GAP_FILL    = 9999.0  # 자막 빈 공간 금지 — 다음 자막 시작까지 무조건 연장
 NO_PERIOD   = True    # 자막에서 마침표(.) 제거 (?·!·소수점은 유지)
 
 import re as _re

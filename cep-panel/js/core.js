@@ -222,7 +222,8 @@
 
   // 연속 발화 자막 사이 공백 메움 (엔진 fill_gaps와 동일 규칙, in-place)
   function fillGapsCues(cues, maxGap) {
-    var mg = maxGap == null ? 1.2 : maxGap;
+    // 컷 타임라인은 무음이 이미 제거된 상태 — 자막은 빈 공간 없이 다음 자막 시작까지 연장
+    var mg = maxGap == null ? Infinity : maxGap;
     for (var i = 0; i < cues.length - 1; i++) {
       var gap = cues[i + 1].start - cues[i].end;
       if (gap > 0 && gap <= mg) cues[i].end = cues[i + 1].start;
