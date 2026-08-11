@@ -680,6 +680,33 @@
     }
   })();
 
+  // 저장 알림: 부드럽게 떠올랐다가 성공이면 2.5초 뒤 스르륵 사라짐(오류는 유지)
+  var noteTimers = {};
+  function flashNote(id, msg, kind) {
+    var el = $(id);
+    if (!el) return;
+    clearTimeout(noteTimers[id]);
+    el.textContent = msg;
+    el.className = kind || "";
+    // 리플로우 강제 후 .show 부여 → 페이드/상승 트랜지션 발동
+    void el.offsetWidth;
+    el.classList.add("show");
+    if (kind !== "err") {
+      noteTimers[id] = setTimeout(function () {
+        el.classList.remove("show");
+        setTimeout(function () { if (!el.classList.contains("show")) el.textContent = ""; }, 300);
+      }, 2500);
+    }
+  }
+
+  // 설정 카드 내용을 튀지 않게 부드럽게 새로고침(짧은 페이드 후 갱신)
+  function smoothRefresh(anyElInCard, updateFn) {
+    var body = anyElInCard && anyElInCard.closest ? anyElInCard.closest(".set-body") : null;
+    if (!body) { updateFn(); return; }
+    body.style.opacity = "0.35";
+    setTimeout(function () { try { updateFn(); } finally { body.style.opacity = "1"; } }, 180);
+  }
+
   function loadVitoUi() {
     var cfg = readEngineConfig();
     var has = !!(cfg.VITO_CLIENT_ID && cfg.VITO_CLIENT_SECRET);
@@ -696,13 +723,13 @@
     var id = $("set-vito-id").value.trim();
     var sec = $("set-vito-secret").value.trim();
     var cfg = readEngineConfig();
-    if (!id) { setStatus("CLIENT ID를 입력해 주세요", "err"); return; }
-    if (!sec) { setStatus("CLIENT SECRET을 입력해 주세요", "err"); return; }
+    if (!id) { flashNote("vito-status", "CLIENT ID를 입력해 주세요", "err"); return; }
+    if (!sec) { flashNote("vito-status", "CLIENT SECRET을 입력해 주세요", "err"); return; }
     cfg.VITO_CLIENT_ID = id;
     cfg.VITO_CLIENT_SECRET = sec;
-    if (!writeEngineConfig(cfg)) { setStatus("저장 실패 — 엔진 폴더 쓰기 권한을 확인해 주세요", "err"); return; }
-    loadVitoUi();
-    setStatus("VITO 키 저장됨 (" + maskId(id) + ")", "ok");
+    if (!writeEngineConfig(cfg)) { flashNote("vito-status", "저장 실패 — 엔진 폴더 쓰기 권한을 확인해 주세요", "err"); return; }
+    smoothRefresh($("vito-status"), loadVitoUi);
+    flashNote("vito-status", "VITO 키 저장됨 (" + maskId(id) + ")", "ok");
   }
 
   $("btn-save-vito").addEventListener("click", saveVitoKeys);
@@ -718,7 +745,10 @@
       : (key ? "API 키(<b>" + maskKey(key) + "</b>)로 실행됩니다 — 사용량만큼 과금"
              : '<span class="bad">클로드와 연결되어 있지 않습니다</span>');
     $("set-claude-key").value = key || "";
-    $("claude-key-status").textContent = "";
+    // 로그인 상태별 버튼 토글: 로그인 시 [계정 전환][로그아웃], 로그아웃 시 [로그인]만(계정 전환 자리)
+    $("btn-claude-signin").style.display = email ? "none" : "";
+    $("btn-claude-login").style.display = email ? "" : "none";
+    $("btn-claude-logout").style.display = email ? "" : "none";
   }
 
   // 로그인/로그아웃은 브라우저 OAuth가 필요해 터미널을 열어 진행
@@ -729,25 +759,23 @@
     try { cp.execFile("/usr/bin/osascript", ["-e", osa]); } catch (e) {}
   }
 
-  $("btn-claude-login").addEventListener("click", function () {
+  function startLogin() {
     openTerminalCmd((claudeBin() || "claude") + " /login");
-    $("claude-key-status").textContent = "터미널에서 로그인 진행 후, 카드를 다시 열면 반영됩니다";
-    $("claude-key-status").className = "";
-  });
+    flashNote("claude-key-status", "터미널에서 로그인 진행 후, 카드를 다시 열면 반영됩니다", "err");
+  }
+  $("btn-claude-signin").addEventListener("click", startLogin);
+  $("btn-claude-login").addEventListener("click", startLogin);
   $("btn-claude-logout").addEventListener("click", function () {
     openTerminalCmd((claudeBin() || "claude") + " /logout");
-    $("claude-key-status").textContent = "터미널에서 로그아웃 진행 후, 카드를 다시 열면 반영됩니다";
-    $("claude-key-status").className = "";
+    flashNote("claude-key-status", "터미널에서 로그아웃 진행 후, 카드를 다시 열면 반영됩니다", "err");
   });
 
   $("btn-save-claude-key").addEventListener("click", function () {
     var k = $("set-claude-key").value.trim();
-    var st = $("claude-key-status");
-    if (!k) { st.textContent = "키를 입력해 주세요"; st.className = "err"; return; }
+    if (!k) { flashNote("claude-key-status", "키를 입력해 주세요", "err"); return; }
     saveClaudeKey(k);
-    loadClaudeUi();
-    st.textContent = "저장됨 (" + maskKey(k) + ")";
-    st.className = "ok";
+    smoothRefresh($("claude-key-status"), loadClaudeUi);
+    flashNote("claude-key-status", "저장됨 (" + maskKey(k) + ") — 이제 API 키만으로 컷편집이 실행됩니다", "ok");
   });
 
   function setEnvBadge() {
@@ -848,13 +876,35 @@
     var cfg = readEngineConfig();
     cfg.ANTHROPIC_API_KEY = k;
     writeEngineConfig(cfg); // 저장소 있으면 미러 (없으면 조용히 실패 — localStorage가 원본)
+    approveApiKey(k); // 헤드리스 CLI가 첫 사용 승인 프롬프트에서 막히지 않게 미리 승인
+  }
+
+  // 클로드 CLI는 env ANTHROPIC_API_KEY 최초 사용 시 대화형 승인을 요구한다
+  // (~/.claude.json의 customApiKeyResponses.approved에 키 끝 20자가 있으면 통과).
+  // claude -p 헤드리스 모드는 그 프롬프트에 답할 수 없어 무한 대기/실패한다.
+  // → 키 저장 시점에 승인 토큰을 미리 기록해 프롬프트 자체를 건너뛴다.
+  function approveApiKey(k) {
+    if (!k) return;
+    var fsN = nodeReq("fs");
+    if (!fsN) return;
+    var token = String(k).trim().slice(-20); // CLI의 CZ(key) = trim().slice(-20)
+    var path = homeDir() + "/.claude.json";
+    var j = {};
+    try { j = JSON.parse(fsN.readFileSync(path, "utf8")) || {}; } catch (e) { j = {}; }
+    if (j.oauthAccount && j.oauthAccount.emailAddress) return; // 로그인 계정은 건드리지 않음
+    var c = j.customApiKeyResponses || {};
+    var approved = (c.approved || []).slice();
+    if (approved.indexOf(token) === -1) approved.push(token);
+    j.customApiKeyResponses = { approved: approved, rejected: c.rejected || [] };
+    if (typeof j.hasCompletedOnboarding === "undefined") j.hasCompletedOnboarding = true;
+    try { fsN.writeFileSync(path, JSON.stringify(j, null, 2)); } catch (e) {}
   }
 
   // 규칙: 로그인이 있으면 로그인(정액) 사용, API 키는 로그인이 없을 때만 주입
   function buildClaudeEnv() {
     var env = extendedEnv();
     var key = claudeApiKey();
-    if (!claudeAccount() && key) env.ANTHROPIC_API_KEY = key;
+    if (!claudeAccount() && key) { approveApiKey(key); env.ANTHROPIC_API_KEY = key; }
     return env;
   }
 

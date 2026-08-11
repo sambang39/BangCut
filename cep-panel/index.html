@@ -613,6 +613,14 @@
   #vito-status { font-size: 11px; margin-top: 6px; min-height: 15px; }
   #vito-status.ok { color: var(--ok); }
   #vito-status.err { color: var(--warn); }
+  /* 저장 알림 토스트: 부드럽게 떠올랐다가 스르륵 사라짐 */
+  #vito-status, #claude-key-status {
+    opacity: 0; transform: translateY(-4px);
+    transition: opacity .28s ease, transform .28s ease;
+  }
+  #vito-status.show, #claude-key-status.show { opacity: 1; transform: translateY(0); }
+  /* 저장 후 카드 내용 스무스 새로고침 */
+  .set-body { transition: opacity .18s ease; }
 
   /* ---------- 모달 공통 ---------- */
   .overlay {
@@ -917,6 +925,7 @@
             <div class="pw-wrap"><input type="password" id="set-vito-secret" placeholder="발급받은 CLIENT_SECRET"><button class="eye" tabindex="-1" title="보기/가리기"><svg viewBox="0 0 16 16"><path class="eye-on" d="M8 3C4.5 3 1.7 5.6 1 8c.7 2.4 3.5 5 7 5s6.3-2.6 7-5c-.7-2.4-3.5-5-7-5zm0 8.2A3.2 3.2 0 1 1 8 4.8a3.2 3.2 0 0 1 0 6.4zM8 6.5A1.5 1.5 0 1 0 8 9.5 1.5 1.5 0 0 0 8 6.5z"/><path class="eye-off" style="display:none" d="M2.3 1.6 1.2 2.7l2.2 2.2C2.2 5.8 1.4 6.9 1 8c.7 2.4 3.5 5 7 5 1.3 0 2.5-.3 3.5-.9l2.2 2.2 1.1-1.1L2.3 1.6zM8 11.2A3.2 3.2 0 0 1 4.9 7l1.3 1.3a1.9 1.9 0 0 0 2.5 2.5l1.3 1.3c-.6.3-1.3.5-2 .5-.1 0-.1 0 0 0zm6.9-3.2c-.3 1-1 2-1.9 2.9l-1.6-1.6A3.2 3.2 0 0 0 8 4.8L6.8 3.6c.4-.1.8-.1 1.2-.1 3.5 0 6.3 2.6 6.9 4.5z"/></svg></button></div>
           </div>
           <button class="primary" id="btn-save-vito">저장</button>
+          <p id="vito-status"></p>
         </div>
       </div>
 
@@ -930,6 +939,7 @@
           <p class="desc">클로드 플랜을 구독 중이라면 로그인만으로 구독 요금제의 사용량으로 실행됩니다. 로그인이 없으면 아래 API 키를 사용합니다.</p>
           <p class="set-info" id="claude-conn-desc" style="margin-bottom:10px;">—</p>
           <div style="display:flex; gap:6px; margin-bottom:12px;">
+            <button id="btn-claude-signin" style="display:none;">로그인</button>
             <button id="btn-claude-login">계정 전환</button>
             <button id="btn-claude-logout">로그아웃</button>
           </div>
