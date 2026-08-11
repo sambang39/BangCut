@@ -380,6 +380,74 @@ function bangImportRun(xmlPath, srtPath, label) {
     } catch (err) { return "ERR:" + err; }
 }
 
+// 활성 시퀀스의 비디오 클립을 [원본in, 원본out, 타임라인start, 미디어경로]로 읽어 재투영에 사용.
+// → {"ok":true,"name":…,"fps":…,"clips":[[inSec,outSec,startSec,"path"],…]}
+function bangReadSeqClips() {
+    try {
+        var proj = app.project;
+        if (!proj) return bangErr("열린 프로젝트가 없습니다");
+        var seq = proj.activeSequence;
+        if (!seq) return bangErr("활성 시퀀스가 없습니다. 자막 편집할 시퀀스를 타임라인에 여세요");
+        var fps = 0;
+        try { fps = BANG_TICKS_PER_SEC / Number(seq.timebase); } catch (e0) {}
+        var arr = [];
+        var vts = seq.videoTracks;
+        for (var t = 0; t < vts.numTracks; t++) {
+            var clips = vts[t].clips;
+            for (var i = 0; i < clips.numItems; i++) {
+                var c = clips[i];
+                if (!c || !c.projectItem) continue;
+                var mp = "";
+                try { mp = c.projectItem.getMediaPath(); } catch (e1) {}
+                var inS, outS, stS;
+                try {
+                    inS = Number(c.inPoint.seconds);
+                    outS = Number(c.outPoint.seconds);
+                    stS = Number(c.start.seconds);
+                } catch (e2) { continue; }
+                if (!(outS > inS)) continue;
+                arr.push('[' + inS + ',' + outS + ',' + stS + ',"' + bangEsc(mp) + '"]');
+            }
+        }
+        return '{"ok":true,"name":"' + bangEsc(seq.name) + '","fps":' + fps +
+               ',"clips":[' + arr.join(',') + ']}';
+    } catch (err) { return bangErr(String(err)); }
+}
+
+// 프로젝트 내 모든 시퀀스 목록 → {"ok":true,"sequences":[{"id","name","active"},…]}
+function bangListSequences() {
+    try {
+        var proj = app.project;
+        if (!proj) return bangErr("열린 프로젝트가 없습니다");
+        var active = proj.activeSequence;
+        var activeId = active ? String(active.sequenceID) : "";
+        var out = [];
+        for (var s = 0; s < proj.sequences.numSequences; s++) {
+            var sq = proj.sequences[s];
+            out.push('{"id":"' + bangEsc(String(sq.sequenceID)) + '","name":"' + bangEsc(sq.name) +
+                     '","active":' + (String(sq.sequenceID) === activeId ? "true" : "false") + '}');
+        }
+        return '{"ok":true,"sequences":[' + out.join(',') + ']}';
+    } catch (err) { return bangErr(String(err)); }
+}
+
+// 지정 시퀀스를 타임라인에 실제로 열고 활성화 (드롭다운 선택 시)
+function bangOpenSeq(id) {
+    try {
+        var proj = app.project;
+        if (!proj) return "ERR:열린 프로젝트가 없습니다";
+        for (var s = 0; s < proj.sequences.numSequences; s++) {
+            var sq = proj.sequences[s];
+            if (String(sq.sequenceID) === String(id)) {
+                try { proj.openSequence(String(sq.sequenceID)); } catch (eO) {} // 타임라인 탭 실제 오픈
+                try { proj.activeSequence = sq; } catch (eA) {}
+                return "OK:" + sq.name;
+            }
+        }
+        return "ERR:시퀀스를 찾을 수 없습니다";
+    } catch (err) { return "ERR:" + err; }
+}
+
 // 패널 연결 확인용
 function bangPing() {
     return "PONG " + app.version;

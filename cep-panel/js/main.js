@@ -71,6 +71,8 @@
 
   var cues = [];
   var srtPath = null;
+  var seqSource = null;  // 재투영 소스(전사된 원본 영상 경로) — 시퀀스에서 불러온 경우
+  var seqName = null;    // 현재 자막 편집 대상 시퀀스 이름
   var dirty = false;
   var history = new C.History(120);
   var typingSquash = null;
@@ -137,19 +139,17 @@
   }
 
   function updateEmptyUi() {
-    var rp = getProjSrt();
-    var show = !!(rp && statOk(rp) && !cues.length);
-    var hint = $("resume-hint");
-    if (hint) {
-      hint.style.display = show ? "block" : "none";
-      if (show) $("resume-name").textContent = rp.split("/").pop();
-    }
+    // 빈/편집 상태에 따라 빈 화면 안내 표시 (시퀀스 불러오기 UI는 activateEditor가 관리)
+    var empty = $("empty");
+    if (empty) empty.style.display = cues.length ? "none" : "";
   }
 
   // 자막 편집 화면을 디폴트(빈 상태)로 (K)
   function resetEditor() {
     cues = [];
     srtPath = null;
+    seqSource = null;
+    seqName = null;
     dirty = false;
     pointer = { cue: -1, word: 0 };
     history = new C.History(120);
@@ -162,16 +162,24 @@
     updateHistoryButtons();
   }
 
-  // 자막 편집 탭 진입: 컷편집 결과 SRT 자동 감지·로드 (적용 완료 후에는 자동 로드 안 함)
+  // 자막 편집 탭 진입: 현재 시퀀스 감지 → 불러오기 버튼/드롭다운 준비 (SRT 자동로드 폐지)
+  var seqPoll = null;
   function activateEditor() {
-    if (cues.length) return;
     updateEmptyUi();
-    if (editorDismissed) return;
-    refreshSeqInfo(function () {
-      if (detectedSrt && !cues.length && !editorDismissed) loadFile(detectedSrt);
-      updateEmptyUi();
-    });
+    if (cues.length) { stopSeqPoll(); return; }
+    refreshSeqTarget();
+    populateSeqPick();
+    startSeqPoll();
   }
+  // 빈 상태에서 활성 시퀀스 변화를 주기적으로 감지 (CEP는 실시간 푸시가 없음)
+  function startSeqPoll() {
+    if (seqPoll) return;
+    seqPoll = setInterval(function () {
+      if (current !== "screen-editor" || cues.length) { stopSeqPoll(); return; }
+      refreshSeqTarget();
+    }, 1500);
+  }
+  function stopSeqPoll() { if (seqPoll) { clearInterval(seqPoll); seqPoll = null; } }
 
   // 프로젝트 전환 감지 (J): 다른 프로젝트가 열리면 패널을 디폴트로 초기화
   function pollProject() {
@@ -1362,9 +1370,9 @@
       var srt = outdir + "/" + base + "_cut.srt";
       editorDismissed = false;
       var importDone = function () {
-        refreshSeqInfo(function () {
-          if (detectedSrt && detectedSrt !== srtPath) loadFile(detectedSrt); // 새 자막으로 교체 + 자막 편집 탭 전환
-        });
+        // 컷편집 완료 후 자막 자동로드 안 함 — 사용자가 타임라인에서 다듬은 뒤
+        // 자막 편집 탭에서 "현재 시퀀스 불러오기"로 그 시점 타임라인에 맞춰 생성한다.
+        refreshSeqInfo();
       };
       if (statOk(xml)) {
         // 회차 스냅샷 사본(기준 XML) — 같은 경로 재임포트 문제 회피 + 수술 기준 확보
@@ -2153,7 +2161,8 @@
     if (metaK && (e.key === "s" || e.key === "S")) {
       if (current !== "screen-editor") return;
       e.preventDefault();
-      saveSrt();
+      if (seqSource) applyToSequence(); // 재투영 모드: 저장 개념 대신 시퀀스에 적용
+      else saveSrt();
       return;
     }
     if (e.key === "Escape") {
@@ -2430,6 +2439,98 @@
   function editPath() {
     if (/_edit\.srt$/i.test(srtPath)) return srtPath;
     return srtPath.replace(/\.srt$/i, "_edit.srt");
+  }
+
+  // ── 현재 시퀀스 불러오기 (SRT 없이 재투영) ──
+  // 미디어 경로 → 전사(_words.json) 경로 (존재하는 것)
+  function wordsPathFor(mediaPath) {
+    if (!mediaPath) return null;
+    var dir = mediaPath.replace(/\/[^\/]+$/, "");
+    var base = mediaPath.split("/").pop().replace(/\.[^.]+$/, "");
+    var cands = [dir + "/BangCut/" + base + "_words.json",
+                 dir + "/Premiere-Pro-edit-bang/" + base + "_words.json"];
+    for (var i = 0; i < cands.length; i++) if (statOk(cands[i])) return cands[i];
+    return null;
+  }
+
+  // 활성 시퀀스를 읽어 재투영 자막 생성
+  function loadFromSequence() {
+    if (dirty && cues.length &&
+        !confirm("저장 안 된 자막 편집이 있습니다. 새로 불러올까요?")) return;
+    setStatus("현재 시퀀스 읽는 중…");
+    evalScript("bangReadSeqClips()", function (res) {
+      var info = parseJson(res);
+      if (!info || !info.ok) { setStatus((info && info.err) || "시퀀스를 읽지 못했습니다", "err"); return; }
+      // 소스별로 클립을 모으고, 전사가 있는 소스를 선택 (경로 정규화: 프리미어가 ///로 줌)
+      var bySrc = {};
+      for (var i = 0; i < info.clips.length; i++) {
+        var cl = info.clips[i], mp = String(cl[3] || "").replace(/^\/{2,}/, "/");
+        if (!mp) continue;
+        if (!bySrc[mp]) bySrc[mp] = [];
+        bySrc[mp].push([cl[0], cl[1], cl[2]]);
+      }
+      var chosen = null, wpath = null;
+      for (var p in bySrc) { var wp = wordsPathFor(p); if (wp) { chosen = p; wpath = wp; break; } }
+      if (!chosen) {
+        setStatus("이 시퀀스에는 전사된 원본 클립이 없습니다 — 컷편집한 시퀀스를 여세요", "err");
+        return;
+      }
+      var fs = cepFs();
+      var r = fs.readFile(wpath, window.cep.encoding.UTF8);
+      if (r.err !== 0) { setStatus("전사 파일을 읽지 못했습니다", "err"); return; }
+      var words;
+      try { words = JSON.parse(r.data); } catch (e) { setStatus("전사 파일 형식 오류", "err"); return; }
+      var built = C.buildCuesFromSequence(words, bySrc[chosen]);
+      if (!built.length) { setStatus("자막을 만들지 못했습니다 (클립과 전사가 맞지 않음)", "err"); return; }
+
+      cues = built;
+      seqSource = chosen;
+      seqName = info.name;
+      srtPath = null;
+      dirty = false;
+      anchorRaw = null;
+      pointer = { cue: -1, word: 0 };
+      history = new C.History(120);
+      typingSquash = null;
+      editorDismissed = false;
+      $("editor-file").textContent = info.name;
+      $("editor-file").title = "현재 시퀀스: " + info.name;
+      showScreen("screen-editor");
+      render(0, 0);
+      setStatus("현재 시퀀스에서 자막 " + cues.length + "개 생성 — 컷에 맞춰 정렬됨", "ok");
+    });
+  }
+
+  // 프로젝트 시퀀스 드롭다운 채우기
+  function populateSeqPick() {
+    var sel = $("seq-pick");
+    if (!sel) return;
+    evalScript("bangListSequences()", function (res) {
+      var info = parseJson(res);
+      sel.innerHTML = "";
+      var ph = document.createElement("option");
+      ph.value = ""; ph.textContent = "다른 시퀀스 선택…";
+      sel.appendChild(ph);
+      if (!info || !info.ok) return;
+      for (var i = 0; i < info.sequences.length; i++) {
+        var s = info.sequences[i], o = document.createElement("option");
+        o.value = s.id; o.textContent = s.name + (s.active ? "  (열림)" : "");
+        sel.appendChild(o);
+      }
+    });
+  }
+
+  // 활성 시퀀스 감지 → 불러오기 버튼 활성/비활성 + 이름 표시
+  function refreshSeqTarget() {
+    evalScript("bangGetSeqInfo()", function (res) {
+      var info = parseJson(res), has = !!(info && info.ok);
+      var btn = $("btn-load-seq");
+      if (btn) btn.disabled = !has;
+      var hint = $("seq-hint");
+      if (hint) hint.textContent = has
+        ? "“" + info.name + "” 시퀀스를 자막 편집합니다"
+        : "타임라인에 자막 편집할 시퀀스를 여세요";
+    });
   }
 
   function saveSrt() {
@@ -2837,7 +2938,43 @@
     window.__pendingMigration = null;
   });
 
+  // 시퀀스 재투영 자막을 캡션 트랙으로 적용 (이미 컷된 시퀀스 — 삭제 수술 없음)
+  function captionSrtPath() {
+    if (!seqSource) return null;
+    var dirs = outDirsOf(seqSource);
+    var base = seqSource.split("/").pop().replace(/\.[^.]+$/, "");
+    for (var i = 0; i < dirs.length; i++) if (statOk(dirs[i])) return dirs[i] + "/" + base + "_caption.srt";
+    return dirs[0] + "/" + base + "_caption.srt";
+  }
+
   function applyToSequence() {
+    // 재투영으로 불러온 자막: 삭제 마킹 경로 없이 캡션만 생성
+    if (seqSource) {
+      var fs = cepFs();
+      if (!fs) { setStatus("CEP 환경이 아닙니다", "err"); return; }
+      var outc = captionSrtPath();
+      if (!outc) { setStatus("출력 경로를 만들 수 없습니다", "err"); return; }
+      C.fillGapsCues(cues);
+      var wr = fs.writeFile(outc, C.serializeSrt(cues), window.cep.encoding.UTF8);
+      if (wr.err !== 0) { setStatus("자막 파일 저장 실패 (err " + wr.err + ")", "err"); return; }
+      dirty = false;
+      setStatus("시퀀스에 적용 중…");
+      var btnc = $("btn-apply");
+      btnc.disabled = true;
+      evalScript("bangApplySrt(" + JSON.stringify(outc) + ")", function (res) {
+        btnc.disabled = false;
+        res = String(res || "");
+        if (res.indexOf("OK") === 0) {
+          setStatus(res.replace(/^OK:?/, "") || "캡션 트랙 생성 완료", "ok");
+          editorDismissed = true;
+          resetEditor();
+        } else {
+          setStatus(res.replace(/^ERR:?/, "적용 실패: "), "err");
+        }
+      });
+      return;
+    }
+    // (구) SRT 기반 경로 — 하위호환
     var r = collectMarkRanges();
     if (r.skipped) setStatus("실측 시간이 없는 삭제 표시 " + r.skipped + "개는 건너뜁니다", "err");
     if (r.orig.length) {
@@ -2865,26 +3002,25 @@
 
   // ============ 버튼 연결 (에디터) ============
 
-  function openSrtDialog() {
-    var fs = cepFs();
-    if (!fs) { setStatus("CEP 환경이 아닙니다", "err"); return; }
-    var initDir = localStorage.getItem("lastDir") || "~/Desktop";
-    var res = fs.showOpenDialogEx(false, false, "SRT 파일 선택", initDir, ["srt"]);
-    if (!res || !res.data || !res.data.length) return;
-    localStorage.setItem("lastDir", res.data[0].replace(/\/[^\/]+$/, ""));
-    loadFile(res.data[0]);
-  }
-  $("btn-open-manual").addEventListener("click", openSrtDialog);
-  $("btn-open-file").addEventListener("click", openSrtDialog);
-  $("btn-resume").addEventListener("click", function () {
-    var rp = getProjSrt();
-    if (rp && statOk(rp)) loadFile(rp);
-    else updateEmptyUi();
+  // 현재 시퀀스 불러오기 (빈 상태 버튼 + 툴바 새로고침 버튼)
+  $("btn-load-seq").addEventListener("click", loadFromSequence);
+  $("btn-open-file").addEventListener("click", loadFromSequence); // 툴바: 현재 시퀀스 다시 불러오기
+  // 드롭다운 선택 → 해당 시퀀스를 실제로 열고 불러오기
+  $("seq-pick").addEventListener("change", function () {
+    var id = this.value;
+    if (!id) return;
+    var self = this;
+    setStatus("시퀀스 여는 중…");
+    evalScript("bangOpenSeq(" + JSON.stringify(id) + ")", function (res) {
+      res = String(res || "");
+      if (res.indexOf("OK") === 0) { loadFromSequence(); }
+      else setStatus(res.replace(/^ERR:?/, "시퀀스 열기 실패: "), "err");
+      self.value = "";
+    });
   });
 
   $("btn-undo").addEventListener("click", doUndo);
   $("btn-redo").addEventListener("click", doRedo);
-  $("btn-save").addEventListener("click", saveSrt);
   $("btn-apply").addEventListener("click", applyToSequence);
   function splitAtPointer() {
     if (pointer.cue < 0) return;

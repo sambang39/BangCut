@@ -232,8 +232,93 @@
     return cues;
   }
 
+  // ── 현재 시퀀스 재투영 + 컷 스냅 자막 (SRT 없이 시퀀스에서 직접) ──
+  var IDEAL_CHARS = 18; // 한 줄 이상적 글자수
+  var MAX_CHARS = 24;   // 한 줄 최대(초과 시 강제 나눔)
+
+  // 원본 전사를 현재 시퀀스 클립에 재투영.
+  //  words: [[orig_s, orig_e, word], ...] (원본 영상 시간)
+  //  cs:    [[srcIn, srcOut, tlStart], ...] (타임라인 start 오름차순 정렬된 클립)
+  // 반환: 살아남은 단어 [{tl_s, tl_e, os, oe, word, clip}], 타임라인 시간 오름차순
+  function reprojectWords(words, cs) {
+    var out = [];
+    for (var i = 0; i < words.length; i++) {
+      var os = words[i][0], oe = words[i][1], word = words[i][2];
+      for (var j = 0; j < cs.length; j++) {
+        var ci = cs[j][0], co = cs[j][1], st = cs[j][2];
+        if (os >= ci - 0.0005 && os < co - 0.0005) { // 단어 시작이 이 클립 안
+          var endOrig = oe < co ? oe : co;           // 단어가 컷을 넘으면 클램프(단어 중간 컷)
+          out.push({ tl_s: st + (os - ci), tl_e: st + (endOrig - ci),
+                     os: os, oe: oe, word: word, clip: j });
+          break;
+        }
+      }
+    }
+    out.sort(function (a, b) { return a.tl_s - b.tl_s; });
+    return out;
+  }
+
+  // 재투영 단어들을 "컷에서만 나눔 + 시작은 컷 스냅 + 끝은 다음 시작(wall-to-wall)"으로 큐 생성.
+  //  clips: 원본 클립 배열(정렬 전) [[srcIn, srcOut, tlStart], ...]
+  function buildCuesFromSequence(words, clips, opts) {
+    opts = opts || {};
+    var IDEAL = opts.ideal || IDEAL_CHARS, MAX = opts.max || MAX_CHARS;
+    var cs = clips.slice().sort(function (a, b) { return a[2] - b[2]; });
+    var clipStart = cs.map(function (c) { return c[2]; });
+    var pw = reprojectWords(words, cs);
+    if (!pw.length) return [];
+
+    // 단어를 클립(세그먼트) 단위로 묶은 뒤, 세그먼트 단위로 줄에 패킹 →
+    // 나눔이 항상 컷(클립 경계)에 오게 한다. 한 클립이 MAX보다 길 때만 내부 강제 분할.
+    function wlen(ws) { var n = 0; for (var x = 0; x < ws.length; x++) n += (x ? 1 : 0) + ws[x].word.length; return n; }
+    var segs = [];
+    for (var i = 0; i < pw.length; i++) {
+      if (!segs.length || pw[i].clip !== segs[segs.length - 1][0].clip) segs.push([pw[i]]);
+      else segs[segs.length - 1].push(pw[i]);
+    }
+    // lines: {ws, atCut} — atCut=줄 시작이 컷 경계인가(내부 강제 분할 청크만 false)
+    var lines = [], cur = [], chars = 0;
+    function flush() { if (cur.length) { lines.push({ ws: cur, atCut: true }); cur = []; chars = 0; } }
+    for (var s = 0; s < segs.length; s++) {
+      var seg = segs[s], sc = wlen(seg);
+      if (cur.length && (chars >= IDEAL || chars + 1 + sc > MAX)) flush();
+      if (!cur.length && sc > MAX) {
+        // 한 클립이 MAX 초과 → 단어 경계로 내부 분할(첫 청크만 컷 시작)
+        var chunk = [], cch = 0, firstChunk = true;
+        for (var g = 0; g < seg.length; g++) {
+          var wl = (chunk.length ? 1 : 0) + seg[g].word.length;
+          if (chunk.length && cch + wl > MAX) { lines.push({ ws: chunk, atCut: firstChunk }); firstChunk = false; chunk = []; cch = 0; }
+          chunk.push(seg[g]); cch += (chunk.length > 1 ? 1 : 0) + seg[g].word.length;
+        }
+        if (chunk.length) lines.push({ ws: chunk, atCut: firstChunk });
+        continue;
+      }
+      chars += (cur.length ? 1 : 0) + sc;
+      cur = cur.concat(seg);
+    }
+    flush();
+
+    var cues = [];
+    for (var L = 0; L < lines.length; L++) {
+      var ws = lines[L].ws, first = ws[0], last = ws[ws.length - 1];
+      // 줄 시작이 컷이면 clip.start로 스냅(프레임 정확), 내부 강제 분할이면 단어 시작
+      var startSec = lines[L].atCut ? clipStart[first.clip] : first.tl_s;
+      var text = ws.map(function (x) { return x.word; }).join(" ");
+      cues.push({
+        start: startSec, end: last.tl_e, text: text, atext: text, ldel: false,
+        anchors: ws.map(function (x) { return { cs: x.tl_s, ce: x.tl_e, os: x.os, oe: x.oe }; }),
+        marks: ws.map(function () { return false; })
+      });
+    }
+    // wall-to-wall: 각 큐 끝 = 다음 큐 시작 (빈 공간 0, 컷에서 자막 전환)
+    for (var k = 0; k < cues.length - 1; k++) cues[k].end = cues[k + 1].start;
+    return cues;
+  }
+
   var api = {
     fillGapsCues: fillGapsCues,
+    reprojectWords: reprojectWords,
+    buildCuesFromSequence: buildCuesFromSequence,
     MAX_LINE: MAX_LINE,
     tokenize: tokenize,
     wordTime: wordTime,
