@@ -287,6 +287,33 @@
   #cut-opts { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
   #cutedit-actions { display: flex; gap: 6px; }
   #cutedit-actions .grow { flex: 1; }
+  /* 채팅형 대본 컴포저 */
+  #script-composer {
+    margin: 14px 0 4px; background: var(--bg-input, #232323);
+    border: 1px solid var(--border-soft); border-radius: 14px;
+    padding: 8px 10px 6px; transition: border-color .15s ease;
+  }
+  #script-composer.dragover { border-color: var(--accent); background: var(--sel-bg); }
+  #script-composer.has { border-color: rgba(63,169,245,0.5); }
+  #script-input {
+    width: 100%; background: transparent; border: none; resize: none;
+    color: var(--text); font: inherit; font-size: 12px; line-height: 1.5;
+    outline: none; max-height: 120px;
+  }
+  #script-input::placeholder { color: var(--text-faint); }
+  #sc-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .sc-icon, .sc-send {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 8px; border: none; cursor: pointer;
+    background: transparent; color: var(--text-dim);
+  }
+  .sc-icon:hover { background: #2f2f2f; color: var(--text); }
+  .sc-send { background: var(--accent); color: #fff; margin-left: auto; }
+  .sc-send:hover { background: var(--accent-bright, var(--accent)); }
+  #sc-hint { font-size: 10.5px; color: var(--text-faint); flex: 1;
+    opacity: 0; transform: translateY(-2px); transition: opacity .28s ease, transform .28s ease; }
+  #sc-hint.show { opacity: 1; transform: translateY(0); }
+  #sc-hint.ok { color: var(--ok); }
   #btn-run-cut { padding: 11px; font-size: 14px; }
   #cut-status { margin-top: 10px; font-size: 11px; color: var(--text-dim); min-height: 16px; line-height: 1.6; }
   #cut-status.ok { color: var(--ok); }
@@ -818,6 +845,19 @@
         <p id="res-hint">FHD — 4K 소스를 1080p 시퀀스에 맞춰 배치</p>
       </div>
 
+      </div>
+
+      <div id="script-composer">
+        <textarea id="script-input" rows="2" placeholder="대본이 있으면 붙여넣으세요 — 자막 정확도가 올라가요 (선택)"></textarea>
+        <div id="sc-bar">
+          <button id="sc-import" class="sc-icon" title="대본 문서 가져오기 (txt·docx 드래그도 가능)">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M8 1.5a.75.75 0 0 1 .75.75V7.5h5.25a.75.75 0 0 1 0 1.5H8.75v5.25a.75.75 0 0 1-1.5 0V9H2a.75.75 0 0 1 0-1.5h5.25V2.25A.75.75 0 0 1 8 1.5z"/></svg>
+          </button>
+          <span id="sc-hint"></span>
+          <button id="sc-register" class="sc-send" title="대본 등록">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8 2.5 13.5 8 12.4 9.1 8.75 5.46V13.5h-1.5V5.46L3.6 9.1 2.5 8z"/></svg>
+          </button>
+        </div>
       </div>
 
       <div id="cutedit-actions">

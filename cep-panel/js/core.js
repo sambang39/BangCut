@@ -258,8 +258,55 @@
     return out;
   }
 
+  // 매칭용 정규화: 한글/숫자/영문만, 영문 소문자
+  function normTok(s) { return String(s).toLowerCase().replace(/[^0-9a-z가-힣]/g, ""); }
+
+  // 두 정규화 문자열의 문자 다중집합 교집합 비율(0~1) — 유사 단어 판정용
+  function charOverlap(a, b) {
+    if (!a || !b) return 0;
+    var m = {}, i;
+    for (i = 0; i < a.length; i++) m[a[i]] = (m[a[i]] || 0) + 1;
+    var hit = 0;
+    for (i = 0; i < b.length; i++) if (m[b[i]] > 0) { m[b[i]]--; hit++; }
+    return hit / Math.max(a.length, b.length);
+  }
+
+  // 대본을 재투영 단어열(pw)에 앵커 기반 정렬 → 오전사 철자·문장부호 교정 + 문장끝(sentEnd) 표시.
+  //  - 정확 일치=앵커. 대본에만 있는 단어(건너뛴 대사)·전사에만 있는 단어(애드립)는 윈도우로 흡수.
+  //  - 양쪽 다 매칭 실패 시 유사도(≥0.5)면 치환 교정(오전사 복원), 아니면 전사 원문 유지.
+  function alignScript(pw, scriptText) {
+    if (!scriptText || !pw.length) return pw;
+    var raw = String(scriptText).split(/\s+/), sc = [];
+    for (var r = 0; r < raw.length; r++) {
+      var t = raw[r], n = normTok(t);
+      if (n) sc.push({ raw: t, norm: n, sentEnd: /[.?!。？！]["'’”)\]]*$/.test(t) });
+    }
+    if (!sc.length) return pw;
+    for (var z = 0; z < pw.length; z++) pw[z].sentEnd = false;
+    var W = 6, i = 0, j = 0;
+    while (i < pw.length && j < sc.length) {
+      var wn = normTok(pw[i].word);
+      if (!wn) { i++; continue; }
+      if (wn === sc[j].norm) { // 앵커
+        pw[i].word = sc[j].raw; pw[i].sentEnd = sc[j].sentEnd; i++; j++; continue;
+      }
+      var fJ = -1, a; // 전사단어가 대본 뒤쪽에 있음 = 대본에 건너뛴 대사
+      for (a = 1; a <= W && j + a < sc.length; a++) if (sc[j + a].norm === wn) { fJ = j + a; break; }
+      var fI = -1, b; // 대본단어가 전사 뒤쪽에 있음 = 전사 애드립
+      for (b = 1; b <= W && i + b < pw.length; b++) if (normTok(pw[i + b].word) === sc[j].norm) { fI = b; break; }
+      if (fJ >= 0 && (fI < 0 || fJ - j <= fI)) { j = fJ; continue; }  // 대본 건너뜀
+      if (fI >= 0) { i += 1; continue; }                             // 애드립(전사 유지)
+      if (charOverlap(wn, sc[j].norm) >= 0.5) {                      // 유사 → 치환 교정
+        pw[i].word = sc[j].raw; pw[i].sentEnd = sc[j].sentEnd;
+      }
+      i++; j++;
+    }
+    return pw;
+  }
+
   // 재투영 단어들을 "컷에서만 나눔 + 시작은 컷 스냅 + 끝은 다음 시작(wall-to-wall)"으로 큐 생성.
   //  clips: 원본 클립 배열(정렬 전) [[srcIn, srcOut, tlStart], ...]
+  //  opts.script: 있으면 대본 정렬로 교정·부호·문장끝 나눔 반영
   function buildCuesFromSequence(words, clips, opts) {
     opts = opts || {};
     var IDEAL = opts.ideal || IDEAL_CHARS, MAX = opts.max || MAX_CHARS;
@@ -267,6 +314,7 @@
     var clipStart = cs.map(function (c) { return c[2]; });
     var pw = reprojectWords(words, cs);
     if (!pw.length) return [];
+    if (opts.script) alignScript(pw, opts.script);
 
     // 단어를 클립(세그먼트) 단위로 묶은 뒤, 세그먼트 단위로 줄에 패킹 →
     // 나눔이 항상 컷(클립 경계)에 오게 한다. 한 클립이 MAX보다 길 때만 내부 강제 분할.
@@ -295,6 +343,8 @@
       }
       chars += (cur.length ? 1 : 0) + sc;
       cur = cur.concat(seg);
+      // 대본 문장이 이 세그먼트 끝에서 끝나면 여기(다음 컷)에서 나눔 → 문장 단위 자막
+      if (cur[cur.length - 1].sentEnd && chars >= 6) flush();
     }
     flush();
 
@@ -318,6 +368,7 @@
   var api = {
     fillGapsCues: fillGapsCues,
     reprojectWords: reprojectWords,
+    alignScript: alignScript,
     buildCuesFromSequence: buildCuesFromSequence,
     MAX_LINE: MAX_LINE,
     tokenize: tokenize,
