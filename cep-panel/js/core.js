@@ -363,6 +363,13 @@
     }
     // wall-to-wall: 각 큐 끝 = 다음 큐 시작 (빈 공간 0, 컷에서 자막 전환)
     for (var k = 0; k < cues.length - 1; k++) cues[k].end = cues[k + 1].start;
+    // 안전장치: 어떤 자막도 영상(마지막 클립) 끝을 넘지 않게 클램프 — 자막 튀어나옴 원천 차단
+    var vidEnd = 0;
+    for (var v = 0; v < cs.length; v++) vidEnd = Math.max(vidEnd, cs[v][2] + (cs[v][1] - cs[v][0]));
+    for (var z = 0; z < cues.length; z++) {
+      if (cues[z].end > vidEnd) cues[z].end = vidEnd;
+      if (cues[z].start >= cues[z].end) cues[z].start = Math.max(0, cues[z].end - 0.3);
+    }
     return cues;
   }
 
