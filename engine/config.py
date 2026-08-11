@@ -18,17 +18,17 @@ DEFAULTS = {
     # 무음 — 룸톤/정적을 안전하게 컷(말은 안 건드림). 실측: 룸톤 평균 -55dB, 말 평균 -27dB.
     # -42면 룸톤은 확실히 컷하고 말의 여린 부분(어미·어택)은 지킨다.
     "NOISE_DB": -42.0,       # 이보다 조용하면 무음.
-    "MIN_SILENCE": 0.12,     # 이 길이(초) 이상 조용하면 컷 — 09 수동편집 실측 캘리브레이션(잔여 공백 ≤0.15s)
+    "MIN_SILENCE": 0.20,     # 이 길이(초) 이상 조용하면 컷 — 파열음 폐쇄(~0.15s)보다 커야 단어 내부를 안 자름
     # 비대칭 패딩:
     #   PAD_TAIL = 시작점(말 시작 전) 여유 — 빡빡하되 어택 유실은 방지. 치찰음은 SIBILANT_LEAD.
     #   PAD_LEAD = 끝점(말 끝 뒤) 여유 — 흐리는 어미('-다' 등) 유실 방지. 실측상 어미 릴리스가
     #             Whisper/무음판정 지점보다 0.1~0.15s 더 이어져, 넉넉히 둔다.
-    "PAD_LEAD": 0.04,        # 끝점: 말이 끝난 뒤 남기는 여유(초) — 09 실측 ~0 (STT 끝 스탬프가 릴리스 포함)
-    "PAD_TAIL": 0.03,        # 시작점: 말 시작 전 남기는 여유(초) — 09 실측 ~0
+    "PAD_LEAD": 0.16,        # 끝점: 말 끝 뒤 여유(초) — STT 끝 스탬프가 릴리스보다 이르게 찍혀 넉넉히 필요
+    "PAD_TAIL": 0.09,        # 시작점: 말 시작 전 여유(초) — 어택 유실 방지
     # 치찰음(ㅅ/ㅆ/ㅈ/ㅉ/ㅊ)으로 시작하는 말은 자음 앞부분이 조용해 시작점을 확 자르면
     # ㅅ→ㅌ, ㅈ→ㅇ, ㅊ 유실이 생긴다. 그런 구간만 시작점 여유를 이만큼(초)으로 늘림.
-    "SIBILANT_LEAD": 0.10,   # 치찰음 시작 구간의 시작점 여유(초). PAD_TAIL 대신 적용
-    "EOMI_KEEP_TAIL": 0.06,  # 어미(다/까/요/죠) keep 끝점 최소 여유(초) — 09 실측상 스탬프가 이미 릴리스 포함
+    "SIBILANT_LEAD": 0.16,   # 치찰음 시작 구간의 시작점 여유(초). PAD_TAIL 대신 적용
+    "EOMI_KEEP_TAIL": 0.16,  # 어미(다/까/요/죠) keep 끝점 최소 여유(초) — 릴리스 보호
     "MIN_KEEP": 0.20,        # 이보다 짧은 토막은 버림 — 잘게 쪼개 튀는 소리 방지
 
     # ── 단어-간격 캡핑 (타이트함의 핵심) ──
@@ -37,9 +37,9 @@ DEFAULTS = {
     # 비대칭: 방금 끝난 단어 뒤(tail)는 넉넉히(어미 릴리스 보호), 다음 단어 앞(lead)은 짧게.
     # 어미(다/까/요/죠…)로 끝나면 '-다'류 트레일링 릴리스가 길어 tail을 더 크게 준다.
     "TIGHTEN_WORD_GAPS": True,
-    "WORD_GAP_LEAD_PAD": 0.04,       # 다음 단어 시작 전 남기는 여유(초) — 작게
-    "WORD_GAP_TAIL_PAD": 0.06,       # 방금 끝난 단어 뒤 남기는 여유(초) — 합계 ≈0.10 (09 중앙값)
-    "WORD_GAP_EOMI_TAIL_PAD": 0.06,  # 문장어미 뒤 여유(초) — 09 실측상 추가 보호 불필요(사실상 폐지)
+    "WORD_GAP_LEAD_PAD": 0.07,       # 다음 단어 시작 전 남기는 여유(초) — 작게
+    "WORD_GAP_TAIL_PAD": 0.13,       # 방금 끝난 단어 뒤 남기는 여유(초) — 어미 유실 방지
+    "WORD_GAP_EOMI_TAIL_PAD": 0.20,  # 문장어미 뒤 여유(초) — 릴리스 긴 어미 보호
 
     # 음량
     "TARGET_LUFS": -14.0,
@@ -139,14 +139,14 @@ DEFAULTS = {
 PRESETS = {
     "보수": {   # 타이트가 부담스러울 때 — 어미/사이를 조금 더 남김 (그래도 촘촘한 편)
         "NOISE_DB": -44.0,
-        "MIN_SILENCE": 0.15,
-        "PAD_LEAD": 0.10,              # 끝점(어미) 더 넉넉
-        "PAD_TAIL": 0.05,
-        "SIBILANT_LEAD": 0.13,
+        "MIN_SILENCE": 0.28,
+        "PAD_LEAD": 0.22,              # 끝점(어미) 더 넉넉
+        "PAD_TAIL": 0.10,
+        "SIBILANT_LEAD": 0.18,
         "MIN_KEEP": 0.20,
-        "WORD_GAP_LEAD_PAD": 0.05,
-        "WORD_GAP_TAIL_PAD": 0.08,     # 사이 조금 더 허용
-        "WORD_GAP_EOMI_TAIL_PAD": 0.12,
+        "WORD_GAP_LEAD_PAD": 0.09,
+        "WORD_GAP_TAIL_PAD": 0.16,     # 사이 조금 더 허용
+        "WORD_GAP_EOMI_TAIL_PAD": 0.26,
         "TRIM_DRAG": False,            # 보수는 늘어짐도 살림
         "REPEAT_GAP": 0.5,
         "ACOUSTIC_FILLER": False,
@@ -155,14 +155,14 @@ PRESETS = {
     "표준": {},  # DEFAULTS 그대로 — 타이트(촘촘·빡빡)가 기본
     "공격": {   # 극한 타이트 — 추임새/망설임/어·음까지 제거, 사이 거의 0 (단 어미 릴리스는 보호)
         "NOISE_DB": -40.0,
-        "MIN_SILENCE": 0.10,
-        "PAD_LEAD": 0.02,             # 제로 패드 — 스탬프 경계에서 컷
-        "PAD_TAIL": 0.02,
-        "SIBILANT_LEAD": 0.08,   # 그래도 치찰음 유실은 방지
-        "MIN_KEEP": 0.15,
-        "WORD_GAP_LEAD_PAD": 0.02,     # 다음 단어 앞은 거의 0
-        "WORD_GAP_TAIL_PAD": 0.03,     # 사이 거의 0 — 숨 돌릴 틈 없이 촘촘
-        "WORD_GAP_EOMI_TAIL_PAD": 0.04,
+        "MIN_SILENCE": 0.16,
+        "PAD_LEAD": 0.12,             # 타이트해도 어미 릴리스는 보호
+        "PAD_TAIL": 0.07,
+        "SIBILANT_LEAD": 0.13,   # 그래도 치찰음 유실은 방지
+        "MIN_KEEP": 0.18,
+        "WORD_GAP_LEAD_PAD": 0.05,     # 다음 단어 앞
+        "WORD_GAP_TAIL_PAD": 0.10,     # 어미 유실 방지
+        "WORD_GAP_EOMI_TAIL_PAD": 0.15,
         "DRAG_SYL_MAX": 0.26,          # 늘어짐도 더 타이트하게
         "DRAG_MIN_EXCESS": 0.22,
         "REMOVE_FILLERS": True,
