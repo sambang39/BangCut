@@ -372,11 +372,15 @@
     source.imported = false;
     updateRunButton();
     localStorage.setItem("lastVideoDir", path.replace(/\/[^\/]+$/, ""));
-    // 이 소스로 등록해둔 대본이 있으면 컴포저에 복원
+    // 이 소스로 등록해둔 대본이 있으면 컴포저에 복원(버튼·안내·창 높이 동기화)
     scriptText = scriptFor(path);
     if ($("script-input")) {
       $("script-input").value = scriptText;
       if ($("script-composer")) $("script-composer").classList.toggle("has", !!scriptText);
+      if (typeof updateScState === "function") updateScState();
+      if (scriptText && isReadableScript(scriptText))
+        showScHint("✓ 대본 등록됨 (" + scriptText.replace(/\s+/g, "").length + "자) — 자막에 반영됩니다", "ok");
+      else hideScHint();
     }
 
     $("dropzone").style.display = "none";
@@ -1336,20 +1340,53 @@
     var sc = scriptSidecar(src), fs = cepFs();
     if (sc && fs) { try { fs.writeFile(sc, text, window.cep.encoding.UTF8); } catch (e) {} }
   }
-  function flashScHint(msg, ok) {
+  function showScHint(msg, kind) {
     var el = $("sc-hint");
     if (!el) return;
-    el.textContent = msg; el.className = ok ? "ok" : "";
+    el.textContent = msg; el.className = kind || "";
     void el.offsetWidth; el.classList.add("show");
-    if (ok) setTimeout(function () { el.classList.remove("show"); }, 2500);
   }
+  function hideScHint() { var el = $("sc-hint"); if (el) { el.classList.remove("show"); el.textContent = ""; } }
+
+  // 실제 읽을 수 있는 대본인지 판정 — 자판 난타(ㅂㅈㄷㄹ 미완성 자모)·특수문자만 거부
+  function isReadableScript(text) {
+    var t = String(text).replace(/\s/g, "");
+    if (t.length < 2) return false;
+    var real = (t.match(/[가-힣a-zA-Z0-9]/g) || []).length;   // 완성 글자/영문/숫자
+    var jamo = (t.match(/[ㄱ-ㅎㅏ-ㅣ]/g) || []).length;        // 미완성 자모(난타)
+    if (real < 2) return false;
+    if (jamo > real) return false;          // 자모 난타가 우세
+    if (real / t.length < 0.4) return false; // 특수문자·자모만 잔뜩
+    return true;
+  }
+
   function registerScript() {
     var text = ($("script-input").value || "").trim();
+    if (!text) {  // 싹 지우면 안내도 사라지고 등록 해제
+      scriptText = ""; if (source.path) saveScriptFor(source.path, "");
+      var c0 = $("script-composer"); if (c0) c0.classList.remove("has");
+      hideScHint();
+      return;
+    }
+    if (!isReadableScript(text)) {  // 무의미 입력 → 역으로 안내(유지), 등록 안 함
+      showScHint("문장이나 단어로 된 대본을 입력해 주세요", "warn");
+      return;
+    }
     scriptText = text;
     if (source.path) saveScriptFor(source.path, text);
-    var comp = $("script-composer");
-    if (comp) comp.classList.toggle("has", !!text);
-    flashScHint(text ? "✓ 대본 등록됨 (" + text.replace(/\s+/g, "").length + "자) — 자막에 반영됩니다" : "대본을 비웠습니다", true);
+    var comp = $("script-composer"); if (comp) comp.classList.add("has");
+    // 컷편집 시작 전까지 계속 표시 (자동으로 사라지지 않음)
+    showScHint("✓ 대본 등록됨 (" + text.replace(/\s+/g, "").length + "자) — 자막에 반영됩니다", "ok");
+  }
+
+  // 입력 유무에 따라 등록 버튼 활성/비활성 + 입력창 자동 확장
+  function updateScState() {
+    var input = $("script-input"), reg = $("sc-register");
+    if (!input) return;
+    var has = !!input.value.trim();
+    if (reg) reg.disabled = !has;
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 320) + "px";
   }
   function importScriptFile() {
     var fs = cepFs();
@@ -1374,9 +1411,11 @@
     if (!input || !comp) return;
     $("sc-register").addEventListener("click", registerScript);
     $("sc-import").addEventListener("click", importScriptFile);
-    // 붙여넣기/타이핑 후 잠깐 멈추면 자동 등록
+    updateScState();
+    // 입력 즉시: 버튼 활성/비활성 + 창 자동확장. 잠깐 멈추면 자동 등록(유효성 판정)
     var t = null;
     input.addEventListener("input", function () {
+      updateScState();
       clearTimeout(t); t = setTimeout(registerScript, 700);
     });
     // 드래그 앤 드롭(문서)
@@ -1564,6 +1603,7 @@
 
   function runCut() {
     if (run.running) return;
+    hideScHint(); // 컷편집 시작 → 대본 등록 안내 사라짐
     // H2 게이트: 클로드 코드·프로젝트 설치 확인 후 진행
     checkPrereq(function () {
       if (!prereqOk()) { openOnboard(); return; }
