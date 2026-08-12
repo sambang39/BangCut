@@ -222,14 +222,8 @@
     for (var i = 0; i < cues.length; i++) {
       if (C.maxLineLen(cues[i].text) > C.MAX_LINE) over++;
     }
-    var delN = 0;
-    for (var d = 0; d < cues.length; d++) {
-      if (cues[d].ldel) delN++;
-      else if (cues[d].marks) for (var w = 0; w < cues[d].marks.length; w++) if (cues[d].marks[w]) delN++;
-    }
     $summary.textContent = (dirty ? "수정됨 · " : "") + "자막 " + cues.length + "개" +
-      (over ? " · " + C.MAX_LINE + "자 초과 " + over + "개" : "") +
-      (delN ? " · 삭제 표시 " + delN + "개" : "");
+      (over ? " · " + C.MAX_LINE + "자 초과 " + over + "개" : "");
   }
 
   // ============ 시퀀스 정보 / SRT 감지 ============
@@ -2354,14 +2348,6 @@
         e.preventDefault();
         splitAtPointer();
         break;
-      case "KeyZ":
-        e.preventDefault();
-        if (pointer.cue >= 0) toggleWordMark(pointer.cue, pointer.word);
-        break;
-      case "KeyX":
-        e.preventDefault();
-        if (pointer.cue >= 0) toggleLineMark(pointer.cue);
-        break;
       case "Backspace":
         e.preventDefault();
         if (pointer.cue > 0) mergeUp(pointer.cue);
@@ -2374,31 +2360,6 @@
   });
 
   // ============ 삭제 마킹 (Q3) ============
-
-  function toggleWordMark(ci, wi) {
-    syncAnchors(ci);
-    var c = cues[ci];
-    if (wi >= c.marks.length) return;
-    if (!c.marks[wi] && !c.anchors[wi]) {
-      setStatus("새로 입력된 단어라 실측 시간이 없습니다 — 삭제 시 추정 구간으로 잘립니다", "err");
-    }
-    pushHistory();
-    c.marks[wi] = !c.marks[wi];
-    dirty = true;
-    renderRow(ci);
-    setPointer(ci, wi, { scroll: false, noSync: true });
-    updateSummary();
-  }
-
-  function toggleLineMark(ci) {
-    syncAnchors(ci);
-    pushHistory();
-    cues[ci].ldel = !cues[ci].ldel;
-    dirty = true;
-    renderRow(ci);
-    setPointer(ci, pointer.word, { scroll: false, noSync: true });
-    updateSummary();
-  }
 
   // ============ 검색/바꾸기 드로어 (E) ============
 
