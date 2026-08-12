@@ -1174,8 +1174,9 @@
 
   // ============ 컷편집: 클로드 코드 실행 브리지 (H4) + 쉬운 터미널 프로그레스 (H5) ============
 
-  var STEPS = ["준비", "영상 분석", "전사", "컷 계획", "렌더", "자막 정리", "완료"];
-  var STEP_PCT = [4, 14, 34, 54, 74, 90, 100];
+  var STEPS = ["영상 분석", "전사", "컷 편집", "렌더", "완료"];
+  var STEP_TITLES = ["영상 분석 중…", "전사 중…", "NG 및 무음 구간 컷 편집 중", "렌더 중", "완료!"];
+  var STEP_PCT = [12, 40, 70, 95, 100];
 
   function claudeBin() {
     return prereq.claudePath || localStorage.getItem("bangcutClaudePath");
@@ -1278,8 +1279,7 @@
   function setStep(i) {
     if (i <= run.step) return; // 뒤로는 안 감 (마커 중복/순서 흔들림 방어)
     run.step = i;
-    var last = i === STEPS.length - 1;
-    $("prog-title").textContent = last ? "완료!" : STEPS[i] + " 중…";
+    $("prog-title").textContent = STEP_TITLES[i] || (STEPS[i] + " 중…");
     setPct(i === 0 ? 3 : STEP_PCT[i - 1]);
     renderSteps();
   }
@@ -1464,8 +1464,8 @@
     L.push("실행 방식: cut-editing 스킬 플로우를 따르라. edit.sh는 백그라운드로 실행하고 출력을 주기적으로 확인하면서 진행 단계를 보고하라.");
     L.push("실행 횟수(정확히 2회, 필수): 1차는 --plan-only로 전사·컷 계획만 생성(렌더 없음) → _words.json을 읽고 '컷' 마커 규약(스킬 참조)대로 버리는 테이크·비화자 음성을 --extra-cuts JSON으로 작성 → 2차 풀 실행 1회(--extra-cuts 포함)로 최종 산출. NG 스윕(컷 마커 처리)은 생략 금지.");
     L.push("진행 보고 규칙(패널 프로그레스용 — 반드시 지켜라): 아래 단계가 시작될 때마다 해당 마커를 텍스트로 정확히 한 줄 출력:");
-    L.push("###STEP:2:영상 분석 / ###STEP:3:전사 / ###STEP:4:컷 계획 / ###STEP:5:렌더 / ###STEP:6:자막 정리");
-    L.push("(엔진 출력에서 받아쓰기·무음/컷·XML/렌더·자막 단계가 관찰될 때 해당 마커를 출력하면 된다)");
+    L.push("###STEP:2:전사 / ###STEP:3:컷 편집 / ###STEP:4:렌더");
+    L.push("(전사 시작=STEP:2, 무음/NG 컷 계획 시작=STEP:3, 렌더·자막 생성 시작=STEP:4)");
     L.push("결과 검수(과도한 컷·어미 잘림 확인) 후 성공이면 마지막 줄에 ###DONE, 실패면 ###FAIL:<한 줄 사유> 를 출력하라.");
     L.push("");
     L.push("절대 규칙: ###DONE 또는 ###FAIL을 출력하기 전에는 어떤 경우에도 응답을 끝내지 말라.");
@@ -1559,7 +1559,7 @@
     var re = /###STEP:(\d+):/g;
     while ((m = re.exec(text))) {
       var n = parseInt(m[1], 10);
-      if (n >= 1 && n <= 6) setStep(n - 1); // 마커 번호 = STEPS 인덱스 + 1
+      if (n >= 2 && n <= 4) setStep(n - 1); // 마커 번호 = STEPS 인덱스 + 1 (전사=2/컷편집=3/렌더=4)
     }
     if (text.indexOf("###DONE") !== -1) run.sawDone = true;
     var f = text.match(/###FAIL:([^\n]*)/);
