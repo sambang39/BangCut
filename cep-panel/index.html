@@ -535,13 +535,13 @@
   #seq-hint { color: var(--text); font-size: 12.5px; }
   #btn-load-seq { padding: 8px 18px; font-size: 12.5px; }
   #btn-load-seq:disabled { opacity: .45; cursor: default; }
-  #seq-pick-wrap { margin-top: 12px; display: inline-block; position: relative; text-align: left; }
+  #seq-pick-wrap { margin: 12px auto 0; display: block; position: relative; text-align: left; width: min(680px, 92%); }
   .seq-dd-btn {
     -webkit-appearance: none; appearance: none;
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 8px; width: 100%;
     background: #202020; color: var(--text);
     border: 1px solid var(--border-soft); border-radius: 10px;
-    padding: 8px 12px; font-size: 12px; min-width: 240px; max-width: 320px;
+    padding: 8px 12px; font-size: 12px;
     cursor: pointer; transition: border-color .15s ease, background-color .15s ease;
   }
   .seq-dd-btn:hover { border-color: var(--text-dim); background: #262626; }
