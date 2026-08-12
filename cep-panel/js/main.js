@@ -1611,6 +1611,31 @@
     });
   }
 
+  // STT 모델(VITO↔Whisper)이 직전 실행과 다르면 전사 캐시를 삭제한다.
+  // 엔진 get_transcript는 _words.json이 있으면 모델 무관하게 재사용하므로,
+  // 모델을 바꿔도 이전 전사가 그대로 쓰이는 캐시 버그를 패널에서 차단.
+  function invalidateTranscriptIfModelChanged() {
+    if (!source.path) return;
+    var key = "bangcutStt:" + source.path;
+    var prev = localStorage.getItem(key);
+    var cur = settings.sttModel || "whisper";
+    if (prev && prev !== cur) {
+      var fs = cepFs();
+      var dirs = outDirsOf(source.path);
+      var base = source.path.split("/").pop().replace(/\.[^.]+$/, "");
+      var files = [];
+      for (var i = 0; i < dirs.length; i++) {
+        files.push(dirs[i] + "/" + base + "_words.json");
+        files.push(dirs[i] + "/" + base + "_vito_words.json");
+        files.push(dirs[i] + "/" + base + "_cut_words.json");
+      }
+      for (var f = 0; f < files.length; f++) {
+        if (fs && statOk(files[f])) { try { fs.deleteFile(files[f]); } catch (e) {} }
+      }
+    }
+    localStorage.setItem(key, cur);
+  }
+
   function runCutReady() {
     if (run.running) return;
     var cp = nodeReq("child_process");
@@ -1620,6 +1645,7 @@
     if (!root || !statOk(root + "/edit.sh")) { cutStatus("엔진(edit.sh)을 찾지 못했습니다: " + root, "err"); return; }
     if (!source.path) { cutStatus("컷편집할 영상을 먼저 선택해 주세요 (드래그 앤 드롭 또는 클릭)", "err"); return; }
 
+    invalidateTranscriptIfModelChanged(); // STT 모델 바뀌면 전사 캐시 삭제(모델 무관 재사용 방지)
     saveSettings(true);
     try { writeEngineOverride(root); } catch (e) {
       cutStatus("엔진 설정 전달 실패: " + e.message, "err");
