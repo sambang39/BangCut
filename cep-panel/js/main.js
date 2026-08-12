@@ -64,7 +64,6 @@
     sttModel: "whisper", resolution: "FHD"
   };
   var source = { path: null, meta: null, imported: false }; // 컷편집 대상 (드롭/선택한 원테이크 파일)
-  var scriptText = "";  // 등록된 대본 (자막 정렬·NG 보조에 사용, 프로젝트별 기억)
   var detectedSrt = null;
   var xmlBasis = null; // 현재 시퀀스의 기준 XML (마킹 수술의 입력)
   var projectPath = null;     // 현재 프리미어 프로젝트 (전환 감지용)
@@ -366,16 +365,6 @@
     source.imported = false;
     updateRunButton();
     localStorage.setItem("lastVideoDir", path.replace(/\/[^\/]+$/, ""));
-    // 이 소스로 등록해둔 대본이 있으면 컴포저에 복원(버튼·안내·창 높이 동기화)
-    scriptText = scriptFor(path);
-    if ($("script-input")) {
-      $("script-input").value = scriptText;
-      if ($("script-composer")) $("script-composer").classList.toggle("has", !!scriptText);
-      if (typeof updateScState === "function") updateScState();
-      if (scriptText && isReadableScript(scriptText))
-        showScHint("✓ 대본 등록됨 (" + scriptText.replace(/\s+/g, "").length + "자) — 자막에 반영됩니다", "ok");
-      else hideScHint();
-    }
 
     $("dropzone").style.display = "none";
     $("src-card").style.display = "flex";
@@ -1314,129 +1303,6 @@
 
   // ---------- 클로드 요청 프롬프트 ----------
 
-  // ── 대본 컴포저 (채팅형) — 붙여넣기/임포트 → 프로젝트별 기억 → 자막 정렬·NG 보조 ──
-  function scriptSidecar(src) {
-    if (!src) return null;
-    var dirs = outDirsOf(src);
-    var base = src.split("/").pop().replace(/\.[^.]+$/, "");
-    for (var i = 0; i < dirs.length; i++) if (statOk(dirs[i])) return dirs[i] + "/" + base + "_script.txt";
-    return dirs[0] + "/" + base + "_script.txt";
-  }
-  function scriptFor(src) {
-    if (!src) return "";
-    var v = localStorage.getItem("bangcutScript:" + src);
-    if (v != null) return v;
-    var sc = scriptSidecar(src), fs = cepFs();
-    if (sc && fs && statOk(sc)) { var r = fs.readFile(sc, window.cep.encoding.UTF8); if (r.err === 0) return r.data; }
-    return "";
-  }
-  function saveScriptFor(src, text) {
-    if (!src) return;
-    localStorage.setItem("bangcutScript:" + src, text);
-    // 사이드카로도 기록(엔진 NG 참조 + 세션 넘어 보존). 폴더 없으면 조용히 스킵.
-    var sc = scriptSidecar(src), fs = cepFs();
-    if (sc && fs) { try { fs.writeFile(sc, text, window.cep.encoding.UTF8); } catch (e) {} }
-  }
-  function showScHint(msg, kind) {
-    var el = $("sc-hint");
-    if (!el) return;
-    el.textContent = msg; el.className = kind || "";
-    void el.offsetWidth; el.classList.add("show");
-  }
-  function hideScHint() { var el = $("sc-hint"); if (el) { el.classList.remove("show"); el.textContent = ""; } }
-
-  // 실제 읽을 수 있는 대본인지 판정 — 자판 난타(ㅂㅈㄷㄹ 미완성 자모)·특수문자만 거부
-  function isReadableScript(text) {
-    var t = String(text).replace(/\s/g, "");
-    if (t.length < 2) return false;
-    var real = (t.match(/[가-힣a-zA-Z0-9]/g) || []).length;   // 완성 글자/영문/숫자
-    var jamo = (t.match(/[ㄱ-ㅎㅏ-ㅣ]/g) || []).length;        // 미완성 자모(난타)
-    if (real < 2) return false;
-    if (jamo > real) return false;          // 자모 난타가 우세
-    if (real / t.length < 0.4) return false; // 특수문자·자모만 잔뜩
-    return true;
-  }
-
-  function registerScript() {
-    var text = ($("script-input").value || "").trim();
-    if (!text) {  // 싹 지우면 안내도 사라지고 등록 해제
-      scriptText = ""; if (source.path) saveScriptFor(source.path, "");
-      var c0 = $("script-composer"); if (c0) c0.classList.remove("has");
-      hideScHint();
-      return;
-    }
-    if (!isReadableScript(text)) {  // 무의미 입력 → 역으로 안내(유지), 등록 안 함
-      showScHint("문장이나 단어로 된 대본을 입력해 주세요", "warn");
-      return;
-    }
-    scriptText = text;
-    if (source.path) saveScriptFor(source.path, text);
-    var comp = $("script-composer"); if (comp) comp.classList.add("has");
-    // 컷편집 시작 전까지 계속 표시 (자동으로 사라지지 않음)
-    showScHint("✓ 대본 등록됨 (" + text.replace(/\s+/g, "").length + "자) — 자막에 반영됩니다", "ok");
-  }
-
-  // 입력 유무에 따라 등록 버튼 활성/비활성 + 입력창 자동 확장
-  function updateScState() {
-    var input = $("script-input"), reg = $("sc-register");
-    if (!input) return;
-    var has = !!input.value.trim();
-    if (reg) reg.disabled = !has;
-    input.style.height = "auto";
-    input.style.height = Math.min(input.scrollHeight, 320) + "px";
-  }
-  function importScriptFile() {
-    var fs = cepFs();
-    if (!fs) return;
-    var initDir = localStorage.getItem("lastVideoDir") || "~/Desktop";
-    var res = fs.showOpenDialogEx(false, false, "대본 문서 선택", initDir, ["txt", "md", "rtf", "docx"]);
-    if (!res || !res.data || !res.data.length) return;
-    readScriptDoc(res.data[0]);
-  }
-  // txt/md는 그대로, docx는 XML에서 텍스트 추출(간이)
-  function readScriptDoc(path) {
-    var fs = cepFs();
-    if (!fs) return;
-    if (/\.docx$/i.test(path)) { flashScHint("docx는 텍스트로 저장해 붙여넣어 주세요 (간이 지원 준비중)", false); return; }
-    var r = fs.readFile(path, window.cep.encoding.UTF8);
-    if (r.err !== 0) { flashScHint("문서를 읽지 못했습니다", false); return; }
-    $("script-input").value = r.data;
-    registerScript();
-  }
-  (function initScriptComposer() {
-    var input = $("script-input"), comp = $("script-composer");
-    if (!input || !comp) return;
-    $("sc-register").addEventListener("click", registerScript);
-    $("sc-import").addEventListener("click", importScriptFile);
-    updateScState();
-    // 입력 즉시: 버튼 활성/비활성 + 창 자동확장. 잠깐 멈추면 자동 등록(유효성 판정)
-    var t = null;
-    input.addEventListener("input", function () {
-      updateScState();
-      clearTimeout(t); t = setTimeout(registerScript, 700);
-    });
-    // 드래그 앤 드롭(문서)
-    comp.addEventListener("dragover", function (e) { e.preventDefault(); comp.classList.add("dragover"); });
-    comp.addEventListener("dragleave", function () { comp.classList.remove("dragover"); });
-    comp.addEventListener("drop", function (e) {
-      e.preventDefault(); comp.classList.remove("dragover");
-      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f && f.path) readScriptDoc(f.path);
-    });
-  })();
-
-  // 엔진(백엔드 클로드)이 읽을 대본 파일을 소스 폴더에 기록(항상 존재하는 경로)
-  function writeScriptForEngine() {
-    if (!scriptText || !source.path) return null;
-    var fs = cepFs();
-    if (!fs) return null;
-    var dir = source.path.replace(/\/[^\/]+$/, "");
-    var base = source.path.split("/").pop().replace(/\.[^.]+$/, "");
-    var p = dir + "/" + base + "_script.txt";
-    var w = fs.writeFile(p, scriptText, window.cep.encoding.UTF8);
-    return w.err === 0 ? p : null;
-  }
-
   function buildPrompt() {
     var L = [];
     L.push('영상 자동 컷편집을 수행하라. 대상 원본: "' + source.path + '"');
@@ -1453,10 +1319,6 @@
     L.push(settings.resolution === "FHD"
       ? "- 시퀀스 해상도: FHD — edit.sh에 --fhd 플래그 추가"
       : "- 시퀀스 해상도: 4K(원본) — --fhd 플래그를 쓰지 말 것");
-    if (scriptText) {
-      var sp = writeScriptForEngine();
-      if (sp) L.push('- 대본 제공됨: "' + sp + '" — NG 스윕에서 참고하라. 같은 대사를 여러 번 말한 재테이크는 대본과 대조해 완성 테이크를 남기고 실수 테이크를 --extra-cuts로 제거. (대본은 참고용 — 무음/추임새 컷을 대본으로 덮어쓰지 말 것)');
-    }
     L.push("");
     L.push("실행 방식: cut-editing 스킬 플로우를 따르라. edit.sh는 백그라운드로 실행하고 출력을 주기적으로 확인하면서 진행 단계를 보고하라.");
     L.push("실행 횟수(정확히 2회, 필수): 1차는 --plan-only로 전사·컷 계획만 생성(렌더 없음) → _words.json을 읽고 '컷' 마커 규약(스킬 참조)대로 버리는 테이크·비화자 음성을 --extra-cuts JSON으로 작성 → 2차 풀 실행 1회(--extra-cuts 포함)로 최종 산출. NG 스윕(컷 마커 처리)은 생략 금지.");
@@ -1600,11 +1462,6 @@
 
   function runCut() {
     if (run.running) return;
-    // 컷편집 시작 → 대본 입력창 비우기 (등록된 대본은 이번 실행·자막에 계속 사용됨)
-    hideScHint();
-    if ($("script-input")) { $("script-input").value = ""; $("script-input").style.height = ""; }
-    if ($("script-composer")) $("script-composer").classList.remove("has");
-    if ($("sc-register")) $("sc-register").disabled = true;
     // H2 게이트: 클로드 코드·프로젝트 설치 확인 후 진행
     checkPrereq(function () {
       if (!prereqOk()) { openOnboard(); return; }
@@ -2607,8 +2464,7 @@
       if (r.err !== 0) { setStatus("전사 파일을 읽지 못했습니다", "err"); return; }
       var words;
       try { words = JSON.parse(r.data); } catch (e) { setStatus("전사 파일 형식 오류", "err"); return; }
-      var scr = scriptFor(chosen); // 이 소스로 등록한 대본이 있으면 교정·부호·나눔에 반영
-      var built = C.buildCuesFromSequence(words, bySrc[chosen], scr ? { script: scr } : null);
+      var built = C.buildCuesFromSequence(words, bySrc[chosen], null);
       if (!built.length) { setStatus("자막을 만들지 못했습니다 (클립과 전사가 맞지 않음)", "err"); return; }
 
       cues = built;
