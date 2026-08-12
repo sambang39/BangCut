@@ -2673,21 +2673,23 @@
 
   // 프로젝트 시퀀스 드롭다운 채우기
   function populateSeqPick() {
-    var sel = $("seq-pick");
-    if (!sel) return;
+    var list = $("seq-dd-list");
+    if (!list) return;
     evalScript("bangListSequences()", function (res) {
       var info = parseJson(res);
-      sel.innerHTML = "";
-      var ph = document.createElement("option");
-      ph.value = ""; ph.textContent = "시퀀스 선택…";
-      sel.appendChild(ph);
-      if (!info || !info.ok) return;
+      list.innerHTML = "";
+      if (!info || !info.ok || !info.sequences.length) {
+        var e = document.createElement("li");
+        e.className = "empty"; e.textContent = "프로젝트에 시퀀스가 없습니다";
+        list.appendChild(e);
+        return;
+      }
       for (var i = 0; i < info.sequences.length; i++) {
-        var s = info.sequences[i], o = document.createElement("option");
-        o.value = s.id;
-        o.textContent = (s.active ? "● " : "") + s.name;   // 열린 시퀀스 = 점+색상 강조
-        if (s.active) { o.style.color = "#3fa9f5"; o.style.fontWeight = "600"; }
-        sel.appendChild(o);
+        var s = info.sequences[i], li = document.createElement("li");
+        li.textContent = s.name;
+        li.setAttribute("data-id", s.id);
+        if (s.active) li.className = "active";   // 열린 시퀀스 = 점+색상 강조
+        list.appendChild(li);
       }
     });
   }
@@ -3176,20 +3178,30 @@
 
   // 현재 시퀀스 불러오기 (빈 상태 버튼 + 툴바 새로고침 버튼)
   $("btn-load-seq").addEventListener("click", loadFromSequence);
-  $("btn-open-file").addEventListener("click", loadFromSequence); // 툴바: 현재 시퀀스 다시 불러오기
-  // 드롭다운 선택 → 해당 시퀀스를 실제로 열고 불러오기
-  $("seq-pick").addEventListener("change", function () {
-    var id = this.value;
-    if (!id) return;
-    var self = this;
-    setStatus("시퀀스 여는 중…");
-    evalScript("bangOpenSeq(" + JSON.stringify(id) + ")", function (res) {
-      res = String(res || "");
-      if (res.indexOf("OK") === 0) { loadFromSequence(); }
-      else setStatus(res.replace(/^ERR:?/, "시퀀스 열기 실패: "), "err");
-      self.value = "";
+  // 커스텀 드롭다운: 버튼 토글 + 항목 선택 → 해당 시퀀스를 실제로 열고 불러오기
+  (function () {
+    var dd = $("seq-pick");
+    if (!dd) return;
+    function closeDD() { dd.classList.remove("open"); }
+    $("seq-dd-btn").addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!dd.classList.contains("open")) populateSeqPick();
+      dd.classList.toggle("open");
     });
-  });
+    $("seq-dd-list").addEventListener("click", function (e) {
+      var li = e.target.closest ? e.target.closest("li[data-id]") : null;
+      if (!li) return;
+      var id = li.getAttribute("data-id");
+      closeDD();
+      setStatus("시퀀스 여는 중…");
+      evalScript("bangOpenSeq(" + JSON.stringify(id) + ")", function (res) {
+        res = String(res || "");
+        if (res.indexOf("OK") === 0) { loadFromSequence(); }
+        else setStatus(res.replace(/^ERR:?/, "시퀀스 열기 실패: "), "err");
+      });
+    });
+    document.addEventListener("click", closeDD);
+  })();
 
   $("btn-undo").addEventListener("click", doUndo);
   $("btn-redo").addEventListener("click", doRedo);
