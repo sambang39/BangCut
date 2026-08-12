@@ -584,7 +584,10 @@
       btns[i].classList.toggle("on", btns[i].dataset.gap === m);
     }
     $("manual-wrap").classList.toggle("off", m === "auto");
-    $("auto-note").style.display = m === "auto" ? "block" : "none";
+    // 문구를 없앴다 넣지 않고 텍스트만 교체 — 높이 불변(스크롤·리사이즈 튐 방지)
+    $("auto-note").textContent = m === "auto"
+      ? "자동 — 클로드가 영상을 분석해 알맞은 값을 정합니다"
+      : "수동 — 프리셋을 고르거나 아래 값을 직접 입력하세요";
   }
 
   (function () {
