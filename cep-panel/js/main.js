@@ -2702,7 +2702,7 @@
       if (btn) btn.disabled = !has;
       var hint = $("seq-hint");
       if (hint) hint.textContent = has
-        ? "“" + info.name + "” 시퀀스를 자막 편집합니다"
+        ? "“" + info.name + "” 시퀀스의 자막 생성 및 편집합니다"
         : "타임라인에 자막 편집할 시퀀스를 여세요";
     });
   }
