@@ -1446,7 +1446,7 @@
     if (gapMode === "manual") {
       L.push("- 무음 구간 설정: 사용자가 직접 지정 — config.json에 MIN_SILENCE/PAD_LEAD/PAD_TAIL로 반영돼 있음. --preset 옵션은 쓰지 말 것");
     } else {
-      L.push("- 무음 구간 설정: 자동 — engine/analyze_video.py를 실행하고 출력이 추천하는 프리셋을 그대로 --preset에 사용 (별도 고민·재분석 금지)");
+      L.push("- 무음 구간 설정: 자동 — 고정 캘리브레이션값 사용. **--preset 표준** 을 그대로 쓰라. engine/analyze_video.py는 실행하지 말 것(분석·프리셋 선택 금지). 표준 프리셋이 이미 사용자 스타일에 맞춰 조정돼 있다.");
     }
     if (settings.sttModel === "vito") {
       L.push("- 전사 모델: VITO — engine/stt_vito.py로 먼저 전사해 _words.json을 만든 뒤 edit.sh 실행 (키는 config.json)");
