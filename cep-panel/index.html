@@ -73,12 +73,16 @@
   button.icon-btn { padding: 4px 7px; display: inline-flex; align-items: center; gap: 4px; }
   button.icon-btn svg { width: 13px; height: 13px; fill: currentColor; }
   kbd {
-    background: rgba(255,255,255,0.08);
-    border: none;
-    border-radius: 4px;
-    padding: 0 4px;
-    font-size: 10px;
-    color: var(--text-dim);
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    background: #3b3b3b;
+    border: 1px solid #4e4e4e;
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.45);
+    font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+    font-size: 12px; line-height: 1;
+    color: var(--text);
   }
   input[type="number"], input[type="text"], input[type="password"] {
     background: var(--bg-input);
@@ -463,8 +467,8 @@
     background: #282828;
     flex-shrink: 0; flex-wrap: wrap;
   }
-  #editor-actionbar button { padding: 3px 8px; font-size: 11px; }
-  #editor-actionbar kbd { margin-left: 2px; }
+  #editor-actionbar button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; font-size: 11px; }
+  #editor-actionbar kbd { margin-left: 1px; }
 
   #cue-list { flex: 1; overflow-y: auto; }
   .row {
@@ -933,8 +937,8 @@
           <button id="btn-split" title="포인트된 단어 앞에서 자막을 둘로 나눕니다 (문장 수정 중엔 커서 위치)">나누기 <kbd>⏎</kbd></button>
           <button id="btn-merge-up" title="선택한 자막을 앞줄과 합칩니다">위와 병합 <kbd>⌫</kbd></button>
           <button id="btn-merge-down" title="선택한 자막을 다음 줄과 합칩니다">아래와 병합 <kbd>⌦</kbd></button>
-          <button class="icon-btn" id="btn-find" title="검색/바꾸기 (⌘F)">
-            <svg viewBox="0 0 16 16"><path d="M11.2 10a5 5 0 1 0-1.2 1.2l3.2 3.2 1.2-1.2-3.2-3.2zM7 10.5A3.5 3.5 0 1 1 7 3.5a3.5 3.5 0 0 1 0 7z"/></svg>검색
+          <button class="icon-btn" id="btn-find" title="찾기・바꾸기 (⌘F)">
+            <svg viewBox="0 0 16 16"><path d="M11.2 10a5 5 0 1 0-1.2 1.2l3.2 3.2 1.2-1.2-3.2-3.2zM7 10.5A3.5 3.5 0 1 1 7 3.5a3.5 3.5 0 0 1 0 7z"/></svg>찾기・바꾸기 <kbd>⌘F</kbd>
           </button>
           <span id="summary"></span>
         </div>
