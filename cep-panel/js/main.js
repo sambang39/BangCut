@@ -2348,6 +2348,7 @@
       case "KeyD": e.preventDefault(); moveWord(1); break;
       case "KeyW": e.preventDefault(); moveCue(-1); break;
       case "KeyS": e.preventDefault(); moveCue(1); break;
+      case "KeyF": e.preventDefault(); openFind(); break;   // 행 선택 모드에서만(입력창 밖) — 찾기·바꾸기
       case "Enter":
       case "NumpadEnter":
         e.preventDefault();
