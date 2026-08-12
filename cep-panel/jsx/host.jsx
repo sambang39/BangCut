@@ -83,36 +83,33 @@ function bangApplySrt(srtPath) {
                 if (mm && parseInt(mm[1], 10) >= maxN) { maxN = parseInt(mm[1], 10); target = cb; }
             }
         }
-        // 같은 이름의 기존 임포트 제거(루트·대상 빈 — 재적용 시 중복 방지)
-        function purge(container) {
-            for (var i = container.children.numItems - 1; i >= 0; i--) {
-                var c0 = container.children[i];
-                if (c0 && c0.name === wantName && c0.type === ProjectItemType.FILE) {
-                    try { c0.deleteBin ? c0.deleteBin() : proj.deleteItem(c0); } catch (eDel) {}
-                }
+        // 임포트 전 존재하던 항목 id 스냅샷 → 임포트 후 새로 생긴 항목을 '이름' 대신 'nodeId'로 식별.
+        // (macOS 파일명은 NFD, 프리미어 항목명은 NFC라 한글 파일명은 name===name 비교가 실패함 → id로 우회)
+        var seen = {};
+        function snapIds(container) {
+            for (var i = 0; i < container.children.numItems; i++) {
+                var c = container.children[i];
+                if (c) { try { seen[c.nodeId] = 1; } catch (eId) {} }
             }
         }
-        purge(root);
-        purge(target);
+        snapIds(root);
+        snapIds(target);
 
-        var beforeN = root.children.numItems;
         proj.importFiles([srtPath], true, target, false);
 
-        var item = null;
-        for (var j = target.children.numItems - 1; j >= 0; j--) {
-            if (target.children[j] && target.children[j].name === wantName) { item = target.children[j]; break; }
-        }
-        if (!item) {
-            // 루트로 떨어졌으면 회수
-            for (var r2 = root.children.numItems - 1; r2 >= beforeN - 1 && r2 >= 0; r2--) {
-                var rc = root.children[r2];
-                if (rc && rc.name === wantName) {
-                    try { rc.moveBin(target); } catch (eMv3) {}
-                    item = rc;
-                    break;
+        function findNew(container) {
+            // 임포트된 SRT는 type=CLIP(1)이라 FILE로 거르면 안 됨 → nodeId로만 새 항목 식별
+            for (var i = container.children.numItems - 1; i >= 0; i--) {
+                var c = container.children[i];
+                if (c) {
+                    var id = null; try { id = c.nodeId; } catch (e2) {}
+                    if (id && !seen[id]) return c;
                 }
             }
+            return null;
         }
+        var item = findNew(target) || findNew(root);  // 대상 빈 우선, 루트로 떨어졌으면 회수
+        if (item) { try { item.moveBin(target); } catch (eMv3) {} }
         if (!item) return "ERR:SRT 임포트에 실패했습니다";
 
         // 캡션 트랙 생성 (Premiere 15+). 포맷 인자는 버전에 따라 달라 순차 시도.
