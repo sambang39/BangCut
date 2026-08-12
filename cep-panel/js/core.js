@@ -245,15 +245,22 @@
     var out = [];
     for (var i = 0; i < words.length; i++) {
       var os = words[i][0], oe = words[i][1], word = words[i][2];
-      for (var j = 0; j < cs.length; j++) {
-        var ci = cs[j][0], co = cs[j][1], st = cs[j][2];
-        if (os >= ci - 0.0005 && os < co - 0.0005) { // 단어 시작이 이 클립 안
-          var endOrig = oe < co ? oe : co;           // 단어가 컷을 넘으면 클램프(단어 중간 컷)
-          out.push({ tl_s: st + (os - ci), tl_e: st + (endOrig - ci),
-                     os: os, oe: oe, word: word, clip: j });
-          break;
-        }
+      if (oe <= os) oe = os + 0.02;
+      var dur = oe - os, bestJ = -1, bestOv = 0;
+      for (var j = 0; j < cs.length; j++) {            // 가장 많이 겹치는 클립 찾기
+        var ov = Math.min(oe, cs[j][1]) - Math.max(os, cs[j][0]);
+        if (ov > bestOv) { bestOv = ov; bestJ = j; }
       }
+      if (bestJ < 0) continue;
+      var ci = cs[bestJ][0], co = cs[bestJ][1], st = cs[bestJ][2];
+      var startInside = os >= ci - 0.0005 && os < co - 0.0005;
+      // 컷에서 살아남은 단어는 유지 — 시작이 클립 안이거나(구 동작) 단어 대부분(≥40%)이 남으면 배정.
+      // 컷 경계가 단어 앞을 살짝 물어(예: 클립 in 18.89 > 단어 시작 18.58) 시작이 밖이어도 안 버림.
+      // 완전히 잘려나간 단어(겹침 0)만 탈락 → 첫 음절·경계 단어 유실 방지.
+      if (!startInside && bestOv < 0.4 * dur) continue;
+      var s2 = os < ci ? ci : os, e2 = oe > co ? co : oe; // 표시 구간은 클립 안으로 클램프
+      out.push({ tl_s: st + (s2 - ci), tl_e: st + (e2 - ci),
+                 os: os, oe: oe, word: word, clip: bestJ });
     }
     out.sort(function (a, b) { return a.tl_s - b.tl_s; });
     return out;
