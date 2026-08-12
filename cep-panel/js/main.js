@@ -142,6 +142,8 @@
     // 빈/편집 상태에 따라 빈 화면 안내 표시 (시퀀스 불러오기 UI는 activateEditor가 관리)
     var empty = $("empty");
     if (empty) empty.style.display = cues.length ? "none" : "";
+    var back = $("btn-editor-back");          // 자막 로드됐을 때만 '처음으로' 노출
+    if (back) back.style.display = cues.length ? "" : "none";
   }
 
   // 자막 편집 화면을 디폴트(빈 상태)로 (K)
@@ -391,7 +393,7 @@
       if (source.path !== path) return;
       if (res.indexOf("OK") === 0) {
         source.imported = true;
-        cutStatus("프로젝트 창 BangCut 폴더에 임포트됨", "ok");
+        cutStatus("프로젝트 창 BangCut 폴더에 임포트됨", "ok", 3500);
       } else {
         source.imported = false;
         cutStatus(res.replace(/^ERR:?/, "임포트 실패: "), "err");
@@ -434,9 +436,7 @@
     document.addEventListener("drop", function (e) { e.preventDefault(); });
 
     $("btn-src-change").addEventListener("click", function () {
-      var name = source.path ? source.path.split("/").pop() : "";
-      $("change-msg").textContent = "기존 '" + name + "' 영상본이 아닌 새로운 영상본으로 교체하시겠어요?";
-      $("change-overlay").classList.add("open");
+      showDropzone();  // 임포트한 영상에서 나가 다시 임포트 화면으로
     });
     $("btn-change-yes").addEventListener("click", function () {
       $("change-overlay").classList.remove("open");
@@ -851,10 +851,15 @@
     }
   }
 
-  function cutStatus(msg, kind) {
+  var cutStatusTimer = null;
+  function cutStatus(msg, kind, autoHideMs) {
     var el = $("cut-status");
     el.textContent = msg;
     el.className = kind || "";
+    clearTimeout(cutStatusTimer);
+    if (msg && autoHideMs) {
+      cutStatusTimer = setTimeout(function () { el.textContent = ""; el.className = ""; }, autoHideMs);
+    }
   }
 
   // ============ Claude 연결 (M) ============
@@ -1380,7 +1385,7 @@
         evalScript("bangImportRun(" + JSON.stringify(xmlSnap) + "," + JSON.stringify(srt) + ",\"러프컷\")", function (res) {
           res = String(res || "");
           if (res.indexOf("OK") === 0) {
-            cutStatus(res.replace(/^OK:?/, ""), "ok");
+            cutStatus(res.replace(/^OK:?/, ""), "ok", 4000);
             logLine("== " + res.replace(/^OK:?/, ""));
             setXmlBasis(xmlSnap);
           } else {
@@ -3026,6 +3031,13 @@
   $("btn-undo").addEventListener("click", doUndo);
   $("btn-redo").addEventListener("click", doRedo);
   $("btn-apply").addEventListener("click", applyToSequence);
+  // 처음 화면으로 — 불러온 자막을 접고 시퀀스 선택 전 빈 상태로 복귀
+  $("btn-editor-back").addEventListener("click", function () {
+    if (dirty && cues.length && !confirm("저장 안 된 자막 편집이 있습니다. 처음 화면으로 나갈까요?")) return;
+    editorDismissed = true;   // 자동 재로드 방지 (사용자가 직접 불러오기 전까지 빈 상태 유지)
+    resetEditor();
+    activateEditor();         // 현재 시퀀스 감지·드롭다운 다시 준비
+  });
   function splitAtPointer() {
     if (pointer.cue < 0) return;
     var toks = tokensOf(pointer.cue);

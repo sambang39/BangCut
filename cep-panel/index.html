@@ -222,6 +222,21 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   #src-card span { font-size: 11px; color: var(--text-dim); }
+  /* 영상 나가기(X): 평소 은은, 호버 시 살짝 확대 + 붉은 삭제 톤 테두리 */
+  #src-card .src-x {
+    flex-shrink: 0; margin-left: 2px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: transparent; border: 1px solid transparent;
+    color: var(--text-faint); opacity: 0.55; cursor: pointer;
+    transition: opacity .16s ease, transform .16s ease, border-color .16s ease, color .16s ease, background-color .16s ease;
+  }
+  #src-card .src-x svg { width: 14px; height: 14px; fill: none; stroke: currentColor; }
+  #src-card .src-x:hover {
+    opacity: 1; transform: scale(1.15);
+    color: #e06c5c; border-color: rgba(224,108,92,0.55); background: rgba(224,108,92,0.09);
+  }
+  #src-card .src-x:active { transform: scale(1.04); }
   #src-err { font-size: 11px; color: var(--warn); margin: -10px 0 12px; min-height: 0; }
 
   #cut-options { transition: opacity 0.15s; }
@@ -782,7 +797,9 @@
           <b id="src-card-name">—</b>
           <span id="src-card-meta">정보 읽는 중…</span>
         </div>
-        <button id="btn-src-change">변경</button>
+        <button id="btn-src-change" class="src-x" title="영상 나가기 — 다시 임포트 화면으로" aria-label="영상 나가기">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
       </div>
       <p id="src-err"></p>
 
@@ -875,6 +892,9 @@
       </div>
       <div id="editor-main">
         <div id="editor-toolbar">
+          <button class="icon-btn" id="btn-editor-back" title="처음 화면으로 — 시퀀스 다시 선택">
+            <svg viewBox="0 0 16 16"><path d="M8 2.5 3.2 6.3l.94 1.18L7 5.2V11.5a1.5 1.5 0 0 0 1.5 1.5H13v-1.5H8.5V5.2l2.86 2.28.94-1.18L8 2.5z"/></svg>
+          </button>
           <span id="editor-file">—</span>
           <button class="icon-btn" id="btn-undo" title="실행 취소 (⌘Z)" disabled>
             <svg viewBox="0 0 16 16"><path d="M6.5 3 2 7l4.5 4V8.2c3 0 5.3.8 6.9 3.3-.4-4-2.9-6.6-6.9-6.9V3z"/></svg>실행 취소
