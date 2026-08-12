@@ -759,7 +759,7 @@
     <div id="side-logo">Bang<span class="cut">Cut</span></div>
     <button class="side-item on" data-screen="screen-cutedit" id="side-cutedit">
       <svg viewBox="0 0 24 24"><path d="M9.6 12 4.2 4.5a1 1 0 0 1 1.6-1.2L12 10l6.2-6.7a1 1 0 0 1 1.6 1.2L14.4 12l2.1 2.9a3.4 3.4 0 1 1-1.7 1L12 13.4l-2.8 2.5a3.4 3.4 0 1 1-1.7-1zM7 20a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 7 20zm10 0a1.6 1.6 0 1 0 0-3.2A1.6 1.6 0 0 0 17 20z"/></svg>
-      컷편집
+      컷 편집
     </button>
     <button class="side-item" data-screen="screen-editor" id="side-editor">
       <svg viewBox="0 0 24 24"><path d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm1 2v14h12V5H6zm2 3h8v1.6H8V8zm0 4h8v1.6H8V12zm0 4h5v1.6H8V16z"/></svg>
@@ -803,10 +803,10 @@
       </div>
     </div>
     <div class="screen-pad">
-      <p class="screen-title" style="margin-bottom:12px;">자동 컷편집</p>
+      <p class="screen-title" style="margin-bottom:12px;">자동 컷 편집</p>
 
       <div id="cut-options">
-      <p class="field-label">컷편집 대상</p>
+      <p class="field-label">컷 편집 대상</p>
       <div id="dropzone">
         <svg viewBox="0 0 24 24"><path d="M12 3l4 4h-3v6h-2V7H8l4-4zM5 14h2v4h10v-4h2v4a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-4z"/></svg>
         <p class="dz-main">원테이크로 촬영한 영상본을 여기에 드래그 앤 드롭하세요</p>
@@ -902,7 +902,7 @@
       </div>
 
       <div id="cutedit-actions">
-        <button class="primary grow" id="btn-run-cut">컷편집 시작</button>
+        <button class="primary grow" id="btn-run-cut">컷 편집 시작</button>
       </div>
       <p id="cut-status"></p>
 
@@ -937,7 +937,9 @@
           <button id="btn-split" title="포인트된 단어 앞에서 자막을 둘로 나눕니다 (문장 수정 중엔 커서 위치)"><kbd>⏎</kbd> 나누기</button>
           <button id="btn-merge-up" title="선택한 자막을 앞줄과 합칩니다"><kbd>⌫</kbd> 위와 병합</button>
           <button id="btn-merge-down" title="선택한 자막을 다음 줄과 합칩니다"><kbd>⌦</kbd> 아래와 병합</button>
-          <button id="btn-find" title="찾기・바꾸기 (F 또는 ⌘F)"><kbd>F</kbd> 찾기・바꾸기</button>
+          <button class="icon-btn" id="btn-find" title="찾기・바꾸기">
+            <svg viewBox="0 0 16 16"><path d="M11.2 10a5 5 0 1 0-1.2 1.2l3.2 3.2 1.2-1.2-3.2-3.2zM7 10.5A3.5 3.5 0 1 1 7 3.5a3.5 3.5 0 0 1 0 7z"/></svg>찾기・바꾸기
+          </button>
           <span id="summary"></span>
         </div>
         <div id="cue-list">
@@ -986,7 +988,6 @@
   <section id="screen-settings" class="screen">
     <div class="screen-pad">
       <p class="screen-title">설정</p>
-      <p class="screen-sub">BangCut 동작에 필요한 키와 환경을 관리합니다</p>
 
       <div class="set-card" id="card-vito">
         <button class="set-head">
@@ -1057,7 +1058,7 @@
   <div id="onboard-overlay" class="overlay">
     <div class="modal-card">
       <p class="ob-title">BangCut을 쓰려면 준비가 필요해요</p>
-      <p class="ob-sub">컷편집은 클로드(Claude)가 이 맥에서 직접 수행합니다. 연결하고 자동 설치를 누르면 끝!</p>
+      <p class="ob-sub">컷 편집은 클로드(Claude)가 이 맥에서 직접 수행합니다. 연결하고 자동 설치를 누르면 끝!</p>
 
       <div class="ob-step">
         <div class="ob-step-head">

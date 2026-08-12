@@ -2315,12 +2315,6 @@
       if (e.shiftKey) doRedo(); else doUndo();
       return;
     }
-    if (metaK && (e.key === "f" || e.key === "F")) {
-      if (current !== "screen-editor") return;
-      e.preventDefault();
-      openFind();
-      return;
-    }
     if (metaK && (e.key === "s" || e.key === "S")) {
       if (current !== "screen-editor") return;
       e.preventDefault();
@@ -2342,7 +2336,6 @@
       case "KeyD": e.preventDefault(); moveWord(1); break;
       case "KeyW": e.preventDefault(); moveCue(-1); break;
       case "KeyS": e.preventDefault(); moveCue(1); break;
-      case "KeyF": e.preventDefault(); openFind(); break;   // 행 선택 모드에서만(입력창 밖) — 찾기·바꾸기
       case "Enter":
       case "NumpadEnter":
         e.preventDefault();
