@@ -2931,10 +2931,12 @@
     if (!seqSource) return null;
     var dirs = outDirsOf(seqSource);
     var base = seqSource.split("/").pop().replace(/\.[^.]+$/, "");
-    // 회차마다 유니크한 파일명 — 프리미어가 같은 경로를 캐시해 이전 자막(구버전)을 재삽입하던 문제 차단.
+    // 트라이 넘버(시퀀스명에서 추출) + 시각 스탬프 → 회차 식별 + 유니크. 프리미어 경로 캐시로 옛 자막 재삽입 차단.
+    var mt = (seqName || "").match(/(\d+)\s*트/);
+    var tryTag = mt ? "_" + mt[1] + "트" : "";
     var d = new Date();
     var stamp = ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2);
-    var name = base + "_caption_" + stamp + ".srt";
+    var name = base + "_caption" + tryTag + "_" + stamp + ".srt";
     for (var i = 0; i < dirs.length; i++) if (statOk(dirs[i])) return dirs[i] + "/" + name;
     return dirs[0] + "/" + name;
   }

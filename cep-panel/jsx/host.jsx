@@ -336,8 +336,22 @@ function bangImportRun(xmlPath, srtPath, label) {
         if (!bin) return "ERR:BangCut 빈 생성 실패";
 
         var runNo = bangNextRunNo(bin);
-        var runBin = bin.createBin(runNo + "트_" + (label || "결과"));
+        var runBin = bin.createBin(runNo + "트");   // 직관적으로 "1트","2트"만
         if (!runBin) return "ERR:회차 빈 생성 실패";
+
+        // 트라이 넘버를 파일명에 새긴 사본으로 임포트 → 식별 쉽고, 같은 경로 캐시로 옛 자막이 재삽입되던 문제 차단
+        function tryNamed(p) {
+            if (!p) return p;
+            var f = new File(p);
+            if (!f.exists) return p;
+            var nm = f.name.replace(/(_cut)(_\d+)?(\.(?:xml|srt))$/i, "$1_" + runNo + "트$3");
+            if (nm === f.name) return p;                 // 패턴 불일치면 원본 유지
+            var dst = f.parent.fsName + "/" + nm;
+            try { if (f.copy(dst)) return dst; } catch (eCopy) {}
+            return p;
+        }
+        xmlPath = tryNamed(xmlPath);
+        srtPath = tryNamed(srtPath);
 
         var beforeIds = {};
         for (var s = 0; s < proj.sequences.numSequences; s++) {
