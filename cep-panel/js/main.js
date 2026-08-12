@@ -3075,8 +3075,12 @@
     if (!seqSource) return null;
     var dirs = outDirsOf(seqSource);
     var base = seqSource.split("/").pop().replace(/\.[^.]+$/, "");
-    for (var i = 0; i < dirs.length; i++) if (statOk(dirs[i])) return dirs[i] + "/" + base + "_caption.srt";
-    return dirs[0] + "/" + base + "_caption.srt";
+    // 회차마다 유니크한 파일명 — 프리미어가 같은 경로를 캐시해 이전 자막(구버전)을 재삽입하던 문제 차단.
+    var d = new Date();
+    var stamp = ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2);
+    var name = base + "_caption_" + stamp + ".srt";
+    for (var i = 0; i < dirs.length; i++) if (statOk(dirs[i])) return dirs[i] + "/" + name;
+    return dirs[0] + "/" + name;
   }
 
   function applyToSequence() {
