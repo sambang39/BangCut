@@ -1603,7 +1603,11 @@
 
   function runCut() {
     if (run.running) return;
-    hideScHint(); // 컷편집 시작 → 대본 등록 안내 사라짐
+    // 컷편집 시작 → 대본 입력창 비우기 (등록된 대본은 이번 실행·자막에 계속 사용됨)
+    hideScHint();
+    if ($("script-input")) { $("script-input").value = ""; $("script-input").style.height = ""; }
+    if ($("script-composer")) $("script-composer").classList.remove("has");
+    if ($("sc-register")) $("sc-register").disabled = true;
     // H2 게이트: 클로드 코드·프로젝트 설치 확인 후 진행
     checkPrereq(function () {
       if (!prereqOk()) { openOnboard(); return; }
@@ -2675,12 +2679,14 @@
       var info = parseJson(res);
       sel.innerHTML = "";
       var ph = document.createElement("option");
-      ph.value = ""; ph.textContent = "다른 시퀀스 선택…";
+      ph.value = ""; ph.textContent = "시퀀스 선택…";
       sel.appendChild(ph);
       if (!info || !info.ok) return;
       for (var i = 0; i < info.sequences.length; i++) {
         var s = info.sequences[i], o = document.createElement("option");
-        o.value = s.id; o.textContent = s.name + (s.active ? "  (열림)" : "");
+        o.value = s.id;
+        o.textContent = (s.active ? "● " : "") + s.name;   // 열린 시퀀스 = 점+색상 강조
+        if (s.active) { o.style.color = "#3fa9f5"; o.style.fontWeight = "600"; }
         sel.appendChild(o);
       }
     });

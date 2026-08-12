@@ -535,12 +535,16 @@
   #seq-hint { color: var(--text); font-size: 12.5px; }
   #btn-load-seq { padding: 8px 18px; font-size: 12.5px; }
   #btn-load-seq:disabled { opacity: .45; cursor: default; }
-  #seq-pick-wrap { margin-top: 10px; }
+  #seq-pick-wrap { margin-top: 12px; }
   #seq-pick {
-    background: var(--surface-2, #232323); color: var(--text-dim);
-    border: 1px solid var(--border-soft); border-radius: 8px;
-    padding: 5px 10px; font-size: 11px; max-width: 280px;
+    -webkit-appearance: none; appearance: none;
+    background: #202020 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M1 3l4 4 4-4' fill='none' stroke='%238a8a8a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 11px center;
+    color: var(--text); border: 1px solid var(--border-soft); border-radius: 10px;
+    padding: 8px 30px 8px 12px; font-size: 12px; min-width: 240px; max-width: 320px;
+    cursor: pointer; transition: border-color .15s ease, background-color .15s ease;
   }
+  #seq-pick:hover { border-color: var(--text-dim); background-color: #262626; }
+  #seq-pick:focus { outline: none; border-color: var(--accent, #3fa9f5); }
 
   /* ---------- 검색/바꾸기 드로어 ---------- */
   #find-drawer {
