@@ -203,6 +203,25 @@ Zoom AL 임포트 → 09_Test 강조 모먼트 1곳에 배치 → 115줌 ease �
 - 이펙트 컴포넌트 제거 API 없음 → 오적용 시 클립 삭제 후 재배치가 정석
 - 사용자 프리셋 실측: Uniform ON, 단일 Scale 키 2개(인포인트+0 → +5f), Anchor to In Point 타입
 
+## 6.9 E2E 실전 검증 완료 (2026-08-13 — 09_Test 풀 파이프라인)
+
+### 실행 결과 (전부 실측 성공)
+1. 기초 세팅: 광고심의필→V1 끝+A1 / 상단 유의문구→V10 0~광고심의필 끝점 / Skin AL→V2 0~영상 끝 (AL end 연장 5s→635s 가능)
+2. **최종 C1 읽기 확정**: `exportAsMediaDirect` + .epr — 사용자 `최종광고물 렌더링.epr` 복제 후 `DoVideo=false` + **`ADBECaptionExportOption=1`(=사이드카)**로 수정 → `<출력>.srt` 사이드카 생성. **타임스탬프 = 시퀀스 절대시간** → 큐 정합에 그대로 사용. 전체(10.5분) 오디오-온리 익스포트 ~4분. 구간 익스포트(in/out, workAreaType=1)도 동작
+3. **mogrt 텍스트 주입 완전 해결 — 바이트 패치 클론** (`mogrt_build.py`): mogrt(zip)⊃prgraphic(zip)⊃prproj(gzip XML)의 `<Name>Source Text</Name>` 블록 StartKeyframeValue blob = `…+길이(LE32)+UTF-8+패딩` → 텍스트 교체 후 재조립 → importMGT → **스타일 완벽 유지 렌더**. 수동 개입 0
+4. 강조자막 11개: 클론 mogrt(V5) + Zoom AL(V3) 큐 시작·끝 정합 배치 → 프리셋 D&D 3라운드(115×6/120×4/110×1) → 전수 검증 11/11
+
+### 파괴 사고 & 확정 가드 (최중요)
+- **에셋 prproj 재임포트 = 파괴적**: 이미 임포트된 프로젝트를 importFiles로 다시 임포트하면 중복 억제가 기존 마스터(Zoom·MGT Media)를 교체하며 **참조하던 트랙 클립 전멸** (probe→import→probe 10초 창에서 실측 확정). → **스킬 필수 가드: 임포트 전 존재 체크, 있으면 스킵**
+- importFiles(prproj, suppressUI=true)는 다이얼로그 없이 전체 임포트됨 (최초 1회는 안전)
+- 복구 지점: 메인 .prproj는 저장 전까지 무사 + Auto-Save 폴더 타임스탬프별 스냅샷 (오토세이브 로테이션 전에 복사 백업)
+
+### API 함정 추가분
+- **Source Text setValue(문자열) = 렌더 파괴** (모델은 바뀌지만 TextDocument 구조 깨져 텍스트 소멸). getValue는 불투명 핸들(코드 992 1글자). getMGTComponent()는 프리미어 네이티브 mogrt에서 null (isMGT=true여도) → 바이트 패치 클론이 유일한 자동 텍스트 경로
+- **responsive pinning mogrt는 Motion Scale 상쇄** (Left/Right 핀 + Parent Width) — 클립 스케일로 텍스트 크기 조절 불가 → **강조 텍스트는 짧은 펀치라인(≤11자)으로 압축 생성**이 정답 (실무 문법과도 일치)
+- 강조 구간 C1 큐 Disable은 여전히 수동 (타임코드 리스트 제공 방식)
+- 한글 리터럴 evalScript 전달 시 NFC/NFD 불일치 함정 — 아이템 매칭은 인덱스/ASCII로, 파일 경로는 NFD 정규화
+
 ## 7. 리스크 (솔직한 것들)
 
 1. **렌더 속도** — 헤드리스 크롬 프레임 단위 캡처라 실시간보다 느림. 10초 내외 클립 단위로 쪼개는 설계로 완화. P0에서 실측 후 판단.
