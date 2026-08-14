@@ -1,0 +1,554 @@
+[
+ {
+  "t0": 7.307,
+  "t1": 9.676,
+  "tpl": "009",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/009_1줄자막.mogrt",
+  "text": "들어보셨죠?",
+  "mood": "q"
+ },
+ {
+  "t0": 9.676,
+  "t1": 13.013,
+  "tpl": "009",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/009_1줄자막.mogrt",
+  "text": "얼마에 팔까?",
+  "mood": "q"
+ },
+ {
+  "t0": 13.013,
+  "t1": 14.613,
+  "tpl": "006",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/006_1줄자막.mogrt",
+  "text": "5천만? 1억?",
+  "mood": "money"
+ },
+ {
+  "t0": 14.514,
+  "t1": 16.683,
+  "tpl": "021",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/021_1줄자막.mogrt",
+  "text": "갑론을박",
+  "mood": "soft"
+ },
+ {
+  "t0": 18.518,
+  "t1": 20.353,
+  "tpl": "014",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/014_1줄자막.mogrt",
+  "text": "완전히 뒤집혔다!",
+  "mood": "fire"
+ },
+ {
+  "t0": 22.956,
+  "t1": 24.824,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "현금 보상, 없던 일",
+  "mood": "warn2"
+ },
+ {
+  "t0": 24.824,
+  "t1": 28.061,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "전혀 다른 조건",
+  "mood": "serious"
+ },
+ {
+  "t0": 28.1,
+  "t1": 32.5,
+  "tpl": "012",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/012_1줄자막.mogrt",
+  "text": "끝까지 보시면~",
+  "mood": "script"
+ },
+ {
+  "t0": 32.5,
+  "t1": 39.4,
+  "tpl": "016",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/016_1줄자막.mogrt",
+  "text": "판단 기준 총정리",
+  "mood": "gold"
+ },
+ {
+  "t0": 40.774,
+  "t1": 44.844,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "5세대 구조부터",
+  "mood": "label"
+ },
+ {
+  "t0": 44.844,
+  "t1": 47.247,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "큰 그림부터",
+  "mood": "label"
+ },
+ {
+  "t0": 56.456,
+  "t1": 60.16,
+  "tpl": "009",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/009_1줄자막.mogrt",
+  "text": "우리에게 무슨 뜻?",
+  "mood": "q"
+ },
+ {
+  "t0": 67.867,
+  "t1": 71.504,
+  "tpl": "010",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/010_1줄자막_아래 in.mogrt",
+  "text": "병원비 늘어난다",
+  "mood": "warn"
+ },
+ {
+  "t0": 82.882,
+  "t1": 85.385,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "서로 다른 잣대",
+  "mood": "serious"
+ },
+ {
+  "t0": 85.385,
+  "t1": 87.087,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "첫째, 급여",
+  "mood": "label"
+ },
+ {
+  "t0": 87.087,
+  "t1": 90.924,
+  "tpl": "008",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/008_1줄자막.mogrt",
+  "text": "다행히 변화 없음",
+  "mood": "pos"
+ },
+ {
+  "t0": 92.959,
+  "t1": 96.262,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "암・뇌혈관 중증",
+  "mood": "serious"
+ },
+ {
+  "t0": 101.267,
+  "t1": 104.838,
+  "tpl": "008",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/008_1줄자막.mogrt",
+  "text": "필수 치료는 그대로",
+  "mood": "pos"
+ },
+ {
+  "t0": 104.838,
+  "t1": 110.443,
+  "tpl": "006",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/006_1줄자막.mogrt",
+  "text": "부담률 20% 유지",
+  "mood": "money"
+ },
+ {
+  "t0": 116.316,
+  "t1": 121.321,
+  "tpl": "015",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/015_1줄자막.mogrt",
+  "text": "80%는 실손이!",
+  "mood": "pink"
+ },
+ {
+  "t0": 121.321,
+  "t1": 123.69,
+  "tpl": "011",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/011_1줄자막_아래 in.mogrt",
+  "text": "오히려 더 좋아진다?",
+  "mood": "cyan"
+ },
+ {
+  "t0": 123.69,
+  "t1": 127.56,
+  "tpl": "012",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/012_1줄자막.mogrt",
+  "text": "걱정 내려놓으셔도~",
+  "mood": "script"
+ },
+ {
+  "t0": 127.56,
+  "t1": 130.997,
+  "tpl": "014",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/014_1줄자막.mogrt",
+  "text": "진짜 문제는 비급여",
+  "mood": "fire"
+ },
+ {
+  "t0": 130.997,
+  "t1": 134.968,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "실손 적자의 주범",
+  "mood": "warn2"
+ },
+ {
+  "t0": 134.968,
+  "t1": 138.771,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "개편의 칼끝, 비급여",
+  "mood": "serious"
+ },
+ {
+  "t0": 158.892,
+  "t1": 160.492,
+  "tpl": "009",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/009_1줄자막.mogrt",
+  "text": "숫자로 확인!",
+  "mood": "q"
+ },
+ {
+  "t0": 206.839,
+  "t1": 210.643,
+  "tpl": "021",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/021_1줄자막.mogrt",
+  "text": "가장 눈여겨볼 대목",
+  "mood": "soft"
+ },
+ {
+  "t0": 210.643,
+  "t1": 212.243,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "셋째, 면책",
+  "mood": "label"
+ },
+ {
+  "t0": 245.345,
+  "t1": 249.215,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "치료비, 내 지갑에서",
+  "mood": "warn2"
+ },
+ {
+  "t0": 249.2,
+  "t1": 254.9,
+  "tpl": "020",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/020_1줄자막.mogrt",
+  "text": "비용부터 따져보기",
+  "mood": "plain"
+ },
+ {
+  "t0": 254.9,
+  "t1": 263.6,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "부담률↑ 면책↑",
+  "mood": "serious"
+ },
+ {
+  "t0": 272.872,
+  "t1": 275.708,
+  "tpl": "014",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/014_1줄자막.mogrt",
+  "text": "지금부터가 진짜!",
+  "mood": "fire"
+ },
+ {
+  "t0": 275.708,
+  "t1": 281.014,
+  "tpl": "010",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/010_1줄자막_아래 in.mogrt",
+  "text": "내 증권 다시 보기",
+  "mood": "warn"
+ },
+ {
+  "t0": 281.014,
+  "t1": 285.618,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "약관 속 재가입 주기",
+  "mood": "warn2"
+ },
+ {
+  "t0": 285.618,
+  "t1": 287.754,
+  "tpl": "017",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/017_1줄자막.mogrt",
+  "text": "모르면 손해!",
+  "mood": "bold"
+ },
+ {
+  "t0": 310.31,
+  "t1": 314.48,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "그 시점 상품 전환",
+  "mood": "serious"
+ },
+ {
+  "t0": 317.383,
+  "t1": 319.519,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "선택권이 없다",
+  "mood": "warn2"
+ },
+ {
+  "t0": 319.519,
+  "t1": 321.354,
+  "tpl": "009",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/009_1줄자막.mogrt",
+  "text": "세대별 정리!",
+  "mood": "q"
+ },
+ {
+  "t0": 354.8,
+  "t1": 359.7,
+  "tpl": "006",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/006_1줄자막.mogrt",
+  "text": "평생 유지 1,600만",
+  "mood": "money"
+ },
+ {
+  "t0": 362.595,
+  "t1": 367.033,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "2,400만은 전환 대상",
+  "mood": "warn2"
+ },
+ {
+  "t0": 367.0,
+  "t1": 377.3,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "1・2세대도 언젠간…",
+  "mood": "serious"
+ },
+ {
+  "t0": 381.781,
+  "t1": 384.25,
+  "tpl": "010",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/010_1줄자막_아래 in.mogrt",
+  "text": "병원비 계획 재설계",
+  "mood": "warn"
+ },
+ {
+  "t0": 384.25,
+  "t1": 386.619,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "오늘의 숙제",
+  "mood": "label"
+ },
+ {
+  "t0": 397.4,
+  "t1": 404.2,
+  "tpl": "009",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/009_1줄자막.mogrt",
+  "text": "안심해도 될까?",
+  "mood": "q"
+ },
+ {
+  "t0": 404.203,
+  "t1": 405.803,
+  "tpl": "020",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/020_1줄자막.mogrt",
+  "text": "간단하지 않습니다",
+  "mood": "plain"
+ },
+ {
+  "t0": 405.7,
+  "t1": 411.4,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "보험사엔 적자 계약",
+  "mood": "warn2"
+ },
+ {
+  "t0": 414.781,
+  "t1": 419.519,
+  "tpl": "019",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/019_1줄자막_심각한 프리텐다드.mogrt",
+  "text": "일괄 전환 검토까지",
+  "mood": "serious"
+ },
+ {
+  "t0": 421.754,
+  "t1": 424.924,
+  "tpl": "008",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/008_1줄자막.mogrt",
+  "text": "강제 전환은 무산",
+  "mood": "pos"
+ },
+ {
+  "t0": 460.593,
+  "t1": 465.832,
+  "tpl": "014",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/014_1줄자막.mogrt",
+  "text": "현금 보상, 최종 제외",
+  "mood": "fire"
+ },
+ {
+  "t0": 498.598,
+  "t1": 500.198,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "일정 체크",
+  "mood": "label"
+ },
+ {
+  "t0": 500.1,
+  "t1": 507.1,
+  "tpl": "006",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/006_1줄자막.mogrt",
+  "text": "올해 11월부터 6개월",
+  "mood": "money"
+ },
+ {
+  "t0": 507.073,
+  "t1": 511.11,
+  "tpl": "016",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/016_1줄자막.mogrt",
+  "text": "판단 기준 2가지",
+  "mood": "gold"
+ },
+ {
+  "t0": 512.178,
+  "t1": 516.983,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "① 재가입 주기 有",
+  "mood": "label"
+ },
+ {
+  "t0": 523.289,
+  "t1": 525.725,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "먼저 움직이지 마라",
+  "mood": "warn2"
+ },
+ {
+  "t0": 528.9,
+  "t1": 533.2,
+  "tpl": "020",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/020_1줄자막.mogrt",
+  "text": "반납할 이유 없다",
+  "mood": "plain"
+ },
+ {
+  "t0": 533.2,
+  "t1": 539.0,
+  "tpl": "001_L",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/001_2줄자막_L.mogrt",
+  "text": "때가 되면 자동 전환",
+  "mood": "serif"
+ },
+ {
+  "t0": 538.971,
+  "t1": 542.742,
+  "tpl": "008",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/008_1줄자막.mogrt",
+  "text": "누리는 게 최선",
+  "mood": "pos"
+ },
+ {
+  "t0": 542.7,
+  "t1": 548.3,
+  "tpl": "016",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/016_1줄자막.mogrt",
+  "text": "전환은 11월에",
+  "mood": "gold"
+ },
+ {
+  "t0": 548.314,
+  "t1": 552.518,
+  "tpl": "022",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/022_1줄자막.mogrt",
+  "text": "② 재가입 주기 無",
+  "mood": "label"
+ },
+ {
+  "t0": 554.1,
+  "t1": 559.5,
+  "tpl": "006",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/006_1줄자막.mogrt",
+  "text": "15만, 20만까지↑",
+  "mood": "money"
+ },
+ {
+  "t0": 565.998,
+  "t1": 568.134,
+  "tpl": "017",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/017_1줄자막.mogrt",
+  "text": "이것 하나만!",
+  "mood": "bold"
+ },
+ {
+  "t0": 568.1,
+  "t1": 571.9,
+  "tpl": "007",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/007_1줄자막.mogrt",
+  "text": "결정은 '계산 후'",
+  "mood": "warn2"
+ },
+ {
+  "t0": 571.9,
+  "t1": 579.6,
+  "tpl": "020",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/020_1줄자막.mogrt",
+  "text": "숫자 확인 후 결정",
+  "mood": "plain"
+ },
+ {
+  "t0": 582.4,
+  "t1": 590.5,
+  "tpl": "011",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/011_1줄자막_아래 in.mogrt",
+  "text": "내 병원비가 정한다",
+  "mood": "cyan"
+ },
+ {
+  "t0": 592.3,
+  "t1": 598.3,
+  "tpl": "001_L",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/001_2줄자막_L.mogrt",
+  "text": "10년, 20년 뒤까지",
+  "mood": "serif"
+ },
+ {
+  "t0": 614.5,
+  "t1": 619.8,
+  "tpl": "008",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/008_1줄자막.mogrt",
+  "text": "계산하면 답 나온다",
+  "mood": "pos"
+ },
+ {
+  "t0": 619.752,
+  "t1": 623.856,
+  "tpl": "010",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/010_1줄자막_아래 in.mogrt",
+  "text": "부모님 세대 필수",
+  "mood": "warn"
+ },
+ {
+  "t0": 623.856,
+  "t1": 626.959,
+  "tpl": "015",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/015_1줄자막.mogrt",
+  "text": "가족분들께 공유~",
+  "mood": "pink"
+ },
+ {
+  "t0": 626.959,
+  "t1": 629.962,
+  "tpl": "018",
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/Mogrt/018_1줄자막.mogrt",
+  "text": "구독과 좋아요!",
+  "mood": "pink"
+ }
+]

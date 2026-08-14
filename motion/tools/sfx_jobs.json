@@ -1,0 +1,543 @@
+{
+ "subscribe": {
+  "t0": 287.8,
+  "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/효과자료/MOV_기본/01_좋아요 구독 알림설정.mov"
+ },
+ "sfx": [
+  {
+   "t": 3.203,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_드릉.mp3",
+   "name": "자막_드릉.mp3"
+  },
+  {
+   "t": 7.307,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_또잉.mp3",
+   "name": "자막_또잉.mp3"
+  },
+  {
+   "t": 9.676,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_뾰로롱(뭐지!?).mp3",
+   "name": "강조_뾰로롱(뭐지!?).mp3"
+  },
+  {
+   "t": 13.013,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 14.514,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 18.518,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_1_뚜둥(북소리).mp3",
+   "name": "자막_1_뚜둥(북소리).mp3"
+  },
+  {
+   "t": 22.956,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_땡(오답).mp3",
+   "name": "강조_땡(오답).mp3"
+  },
+  {
+   "t": 24.824,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쎄한 느낌.mp3",
+   "name": "강조_쎄한 느낌.mp3"
+  },
+  {
+   "t": 28.1,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 32.5,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_정답 띠리링.wav",
+   "name": "자막_정답 띠리링.wav"
+  },
+  {
+   "t": 40.774,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 44.844,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/딸깍(마우스클릭소리_1).mp3",
+   "name": "딸깍(마우스클릭소리_1).mp3"
+  },
+  {
+   "t": 52.218,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_드릉.mp3",
+   "name": "자막_드릉.mp3"
+  },
+  {
+   "t": 56.456,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_또잉.mp3",
+   "name": "자막_또잉.mp3"
+  },
+  {
+   "t": 67.867,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 71.504,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_두두둥 (예능).mp3",
+   "name": "트랜지션_두두둥 (예능).mp3"
+  },
+  {
+   "t": 82.882,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 85.385,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 87.087,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_따랑.mp3",
+   "name": "자막_따랑.mp3"
+  },
+  {
+   "t": 92.959,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_1_뚜둥(북소리).mp3",
+   "name": "자막_1_뚜둥(북소리).mp3"
+  },
+  {
+   "t": 101.267,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_띠링(체크소리).mp3",
+   "name": "자막_띠링(체크소리).mp3"
+  },
+  {
+   "t": 104.838,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_따라란.mp3",
+   "name": "자막_따라란.mp3"
+  },
+  {
+   "t": 116.316,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_ta-da!.mp3",
+   "name": "효과음_ta-da!.mp3"
+  },
+  {
+   "t": 121.321,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_띠링.mp3",
+   "name": "자막_띠링.mp3"
+  },
+  {
+   "t": 123.69,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 127.56,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쿵!(높은 피치).mp3",
+   "name": "강조_쿵!(높은 피치).mp3"
+  },
+  {
+   "t": 130.997,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_1_뚜둥(북소리).mp3",
+   "name": "자막_1_뚜둥(북소리).mp3"
+  },
+  {
+   "t": 134.968,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쎄한 느낌.mp3",
+   "name": "강조_쎄한 느낌.mp3"
+  },
+  {
+   "t": 138.771,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_두두둥 (예능).mp3",
+   "name": "트랜지션_두두둥 (예능).mp3"
+  },
+  {
+   "t": 158.892,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_뾰로롱(뭐지!?).mp3",
+   "name": "강조_뾰로롱(뭐지!?).mp3"
+  },
+  {
+   "t": 160.3,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_두두둥 (예능).mp3",
+   "name": "트랜지션_두두둥 (예능).mp3"
+  },
+  {
+   "t": 163.2,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 166.4,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 176.5,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 187.7,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 190.8,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 195.5,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 206.839,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 210.643,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/딸깍(마우스클릭소리_1).mp3",
+   "name": "딸깍(마우스클릭소리_1).mp3"
+  },
+  {
+   "t": 212.0,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_두두둥 (예능).mp3",
+   "name": "트랜지션_두두둥 (예능).mp3"
+  },
+  {
+   "t": 217.1,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 224.4,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 230.2,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 234.1,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 240.907,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_드릉.mp3",
+   "name": "자막_드릉.mp3"
+  },
+  {
+   "t": 245.345,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_황당 (빨래판 긁는 소리).mp3",
+   "name": "자막_황당 (빨래판 긁는 소리).mp3"
+  },
+  {
+   "t": 249.2,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 254.9,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 264.931,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_드릉.mp3",
+   "name": "자막_드릉.mp3"
+  },
+  {
+   "t": 272.872,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_꽝! (충격).mp3",
+   "name": "자막_꽝! (충격).mp3"
+  },
+  {
+   "t": 275.708,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쿵!(높은 피치).mp3",
+   "name": "강조_쿵!(높은 피치).mp3"
+  },
+  {
+   "t": 281.014,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쿵!!(중간 피치).mp3",
+   "name": "강조_쿵!!(중간 피치).mp3"
+  },
+  {
+   "t": 285.618,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_꽝! (충격).mp3",
+   "name": "자막_꽝! (충격).mp3"
+  },
+  {
+   "t": 292.6,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_휙(중간).mp3",
+   "name": "트랜지션_휙(중간).mp3"
+  },
+  {
+   "t": 292.85,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 310.31,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_1_뚜둥(북소리).mp3",
+   "name": "자막_1_뚜둥(북소리).mp3"
+  },
+  {
+   "t": 314.48,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_드릉.mp3",
+   "name": "자막_드릉.mp3"
+  },
+  {
+   "t": 317.383,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_1_뚜둥(북소리).mp3",
+   "name": "자막_1_뚜둥(북소리).mp3"
+  },
+  {
+   "t": 319.519,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_또잉.mp3",
+   "name": "자막_또잉.mp3"
+  },
+  {
+   "t": 321.354,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_두두둥 (예능).mp3",
+   "name": "트랜지션_두두둥 (예능).mp3"
+  },
+  {
+   "t": 354.8,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 362.595,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_황당 (빨래판 긁는 소리).mp3",
+   "name": "자막_황당 (빨래판 긁는 소리).mp3"
+  },
+  {
+   "t": 367.0,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쎄한 느낌.mp3",
+   "name": "강조_쎄한 느낌.mp3"
+  },
+  {
+   "t": 381.781,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 384.25,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 386.6,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_휙(중간).mp3",
+   "name": "트랜지션_휙(중간).mp3"
+  },
+  {
+   "t": 386.85,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 397.4,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_뾰로롱(뭐지!?).mp3",
+   "name": "강조_뾰로롱(뭐지!?).mp3"
+  },
+  {
+   "t": 404.203,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 405.7,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쿵!!(중간 피치).mp3",
+   "name": "강조_쿵!!(중간 피치).mp3"
+  },
+  {
+   "t": 414.781,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 421.754,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_샬랄라(차임소리).wav",
+   "name": "자막_샬랄라(차임소리).wav"
+  },
+  {
+   "t": 427.4,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_두두둥 (예능).mp3",
+   "name": "트랜지션_두두둥 (예능).mp3"
+  },
+  {
+   "t": 431.8,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 447.3,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 449.8,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 453.3,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_땡(오답).mp3",
+   "name": "강조_땡(오답).mp3"
+  },
+  {
+   "t": 456.889,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_드릉.mp3",
+   "name": "자막_드릉.mp3"
+  },
+  {
+   "t": 460.593,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_놉!.mp3",
+   "name": "효과음_놉!.mp3"
+  },
+  {
+   "t": 465.8,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_두두둥 (예능).mp3",
+   "name": "트랜지션_두두둥 (예능).mp3"
+  },
+  {
+   "t": 470.2,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 474.8,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 481.8,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 493.9,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 498.598,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/딸깍(마우스클릭소리_1).mp3",
+   "name": "딸깍(마우스클릭소리_1).mp3"
+  },
+  {
+   "t": 500.1,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_따라란.mp3",
+   "name": "자막_따라란.mp3"
+  },
+  {
+   "t": 507.073,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_따라란.mp3",
+   "name": "자막_따라란.mp3"
+  },
+  {
+   "t": 512.178,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 516.983,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_드릉.mp3",
+   "name": "자막_드릉.mp3"
+  },
+  {
+   "t": 523.289,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_1_뚜둥(북소리).mp3",
+   "name": "자막_1_뚜둥(북소리).mp3"
+  },
+  {
+   "t": 528.9,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_2_따탁(목탁소리).mp3",
+   "name": "자막_2_따탁(목탁소리).mp3"
+  },
+  {
+   "t": 533.2,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 538.971,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_따랑.mp3",
+   "name": "자막_따랑.mp3"
+  },
+  {
+   "t": 542.7,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_정답 띠리링.wav",
+   "name": "자막_정답 띠리링.wav"
+  },
+  {
+   "t": 548.314,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/딸깍(마우스클릭소리_1).mp3",
+   "name": "딸깍(마우스클릭소리_1).mp3"
+  },
+  {
+   "t": 554.1,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_캐셔.mp3",
+   "name": "효과음_캐셔.mp3"
+  },
+  {
+   "t": 565.998,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_1_뚜둥(북소리).mp3",
+   "name": "자막_1_뚜둥(북소리).mp3"
+  },
+  {
+   "t": 568.1,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_황당 (빨래판 긁는 소리).mp3",
+   "name": "자막_황당 (빨래판 긁는 소리).mp3"
+  },
+  {
+   "t": 571.9,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 582.4,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_따랑.mp3",
+   "name": "자막_따랑.mp3"
+  },
+  {
+   "t": 592.3,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_3_탁탁.mp3",
+   "name": "자막_3_탁탁.mp3"
+  },
+  {
+   "t": 600.9,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/트랜지션_휙(중간).mp3",
+   "name": "트랜지션_휙(중간).mp3"
+  },
+  {
+   "t": 601.15,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_POP_1.mp3",
+   "name": "자막_POP_1.mp3"
+  },
+  {
+   "t": 614.5,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_띠링(체크소리).mp3",
+   "name": "자막_띠링(체크소리).mp3"
+  },
+  {
+   "t": 619.752,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/강조_쿵!(높은 피치).mp3",
+   "name": "강조_쿵!(높은 피치).mp3"
+  },
+  {
+   "t": 623.856,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/자막_따랑.mp3",
+   "name": "자막_따랑.mp3"
+  },
+  {
+   "t": 626.959,
+   "file": "/Users/apple/Desktop/Bang's Work/VideoGraphy/_템플릿/사운드/효과음_ta-da!.mp3",
+   "name": "효과음_ta-da!.mp3"
+  }
+ ]
+}
